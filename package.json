@@ -1,0 +1,24 @@
+{
+  "name": "vibe-machine",
+  "version": "1.0.0",
+  "description": "A browser-based real-time audio visualizer with five reactive modes. Zero dependencies. Pure vibes.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js 3000"
+  },
+  "keywords": [
+    "audio",
+    "visualizer",
+    "web-audio-api",
+    "canvas",
+    "music",
+    "real-time",
+    "vanilla-js"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

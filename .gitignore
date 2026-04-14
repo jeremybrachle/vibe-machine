@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Audio files — add your own, don't commit them
+tracks/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
+*~
+
+# Seed file
+export-guide-seed.md

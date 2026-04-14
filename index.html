@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Machine</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <canvas id="visualizer"></canvas>
+
+  <!-- Player UI overlay -->
+  <div id="ui-overlay">
+    <!-- Top bar: visualization mode -->
+    <div id="top-bar">
+      <div id="viz-modes">
+        <button class="viz-btn active" data-mode="bars">Bars</button>
+        <button class="viz-btn" data-mode="waveform">Wave</button>
+        <button class="viz-btn" data-mode="circular">Circular</button>
+        <button class="viz-btn" data-mode="particles">Particles</button>
+        <button class="viz-btn" data-mode="starfield">Starfield</button>
+      </div>
+      <div id="vibe-toggle">
+        <button id="btn-vibe" title="Complete Vibe Mode (F)">⟐ VIBE MODE</button>
+      </div>
+    </div>
+
+    <!-- Bottom bar: player controls -->
+    <div id="bottom-bar">
+      <div id="track-info">
+        <div id="track-category"></div>
+        <div id="track-name">Click play to start vibing</div>
+      </div>
+
+      <div id="progress-container">
+        <span id="time-current">0:00</span>
+        <input type="range" id="progress-bar" min="0" max="100" value="0" step="0.1">
+        <span id="time-total">0:00</span>
+      </div>
+
+      <div id="controls">
+        <button id="btn-shuffle" class="ctrl-btn" title="Shuffle (S)">⇄</button>
+        <button id="btn-prev" class="ctrl-btn" title="Previous (←)">⏮</button>
+        <button id="btn-play" class="ctrl-btn ctrl-play" title="Play/Pause (Space)">▶</button>
+        <button id="btn-next" class="ctrl-btn" title="Next (→)">⏭</button>
+        <div id="volume-control">
+          <button id="btn-mute" class="ctrl-btn" title="Mute (M)">🔊</button>
+          <input type="range" id="volume-slider" min="0" max="1" value="0.7" step="0.01">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard hints (shown briefly on load) -->
+  <div id="help-overlay" class="hidden">
+    <div id="help-content">
+      <h2>⌨ Keyboard Shortcuts</h2>
+      <div class="help-grid">
+        <kbd>Space</kbd> <span>Play / Pause</span>
+        <kbd>→</kbd> <span>Next track</span>
+        <kbd>←</kbd> <span>Previous track</span>
+        <kbd>S</kbd> <span>Toggle shuffle</span>
+        <kbd>V</kbd> <span>Cycle visualizer</span>
+        <kbd>F</kbd> <span>Complete vibe mode</span>
+        <kbd>M</kbd> <span>Mute / Unmute</span>
+        <kbd>↑↓</kbd> <span>Volume</span>
+        <kbd>1-5</kbd> <span>Jump to visualizer</span>
+        <kbd>?</kbd> <span>Show/hide this help</span>
+      </div>
+      <p class="help-dismiss">Press any key to dismiss</p>
+    </div>
+  </div>
+
+  <script src="visualizers/bars.js"></script>
+  <script src="visualizers/waveform.js"></script>
+  <script src="visualizers/circular.js"></script>
+  <script src="visualizers/particles.js"></script>
+  <script src="visualizers/starfield.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // Apply config-driven branding to DOM
+    (function() {
+      const cfg = window.VIBE_CONFIG || {};
+      if (cfg.title) document.title = cfg.title;
+      const t = cfg.theme || {};
+      const root = document.documentElement.style;
+      if (t.accent)       root.setProperty('--accent', t.accent);
+      if (t.accentRGB)    root.setProperty('--accent-rgb', t.accentRGB);
+      if (t.secondary)    root.setProperty('--secondary', t.secondary);
+      if (t.secondaryRGB) root.setProperty('--secondary-rgb', t.secondaryRGB);
+      if (t.bg)           root.setProperty('--bg', t.bg);
+      if (t.textPrimary)  root.setProperty('--text-primary', t.textPrimary);
+      if (t.textSecondary) root.setProperty('--text-secondary', t.textSecondary);
+      if (t.textDim)      root.setProperty('--text-dim', t.textDim);
+    })();
+  </script>
+</body>
+</html>
