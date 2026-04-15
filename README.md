@@ -18,6 +18,10 @@ Drop your music into `tracks/`, start the server, and hit play. Five visualizati
 
 ## Quick Start
 
+There are three ways to run Vibe Machine:
+
+### Browser version (default)
+
 ```bash
 # 1. Clone the repo
 git clone https://github.com/YOUR_USERNAME/vibe-machine.git
@@ -38,6 +42,35 @@ Custom port:
 ```bash
 node server.js 8080
 ```
+
+### Desktop app (Electron)
+
+Launches as a standalone desktop window — no terminal, no browser tab.
+
+```bash
+# 1. Install dependencies (first time only)
+npm install
+
+# 2. Run the desktop app
+npm run electron
+```
+
+During development, change code and refresh the Electron window — no rebuild needed.
+
+### Distributable build (.exe / .AppImage / .dmg)
+
+Package into a self-contained binary you can share:
+
+```bash
+# Build for your current platform
+npm run build
+```
+
+The output goes to `dist/`. Only do this when you want to hand someone a finished build.
+
+### Reusable / Portfolio edition (no pre-loaded tracks)
+
+Set `dropZoneEnabled: true` in `public/config.js` (this is the default). When no tracks are found in `tracks/`, a cauldron drop zone appears where you can drag-and-drop your own audio files directly into the window. No server restart needed — files play entirely client-side.
 
 ## Prerequisites
 
@@ -63,7 +96,7 @@ npm install
 | `S` | Toggle shuffle |
 | `V` | Cycle visualizer |
 | `1`–`5` | Jump to specific visualizer |
-| `F` / `Enter` | Vibe Mode (fullscreen + hidden UI) |
+| `F` / `Enter` | Vibe Mode (hide UI, mouse effects only) |
 | `M` | Mute / Unmute |
 | `↑` / `↓` | Volume |
 | `?` | Keyboard shortcut help |

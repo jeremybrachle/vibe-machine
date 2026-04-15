@@ -10,6 +10,27 @@
 <body>
   <canvas id="visualizer"></canvas>
 
+  <!-- Queue panel (bottom-right) -->
+  <div id="queue-panel">
+    <div id="queue-header">
+      <span id="queue-title">🧪 Queue</span>
+      <span id="queue-count">0 tracks</span>
+      <button id="btn-queue-toggle" title="Toggle Queue (Q)">▼</button>
+    </div>
+    <div id="queue-body">
+      <div id="queue-drop-zone">
+        <div class="cauldron-mini">
+          <div class="cauldron-liquid-mini">
+            <div class="blob-mini blob-m1"></div>
+            <div class="blob-mini blob-m2"></div>
+          </div>
+        </div>
+        <span>Drop files here</span>
+      </div>
+      <ul id="queue-list"></ul>
+    </div>
+  </div>
+
   <!-- Player UI overlay -->
   <div id="ui-overlay">
     <!-- Top bar: visualization mode -->
@@ -20,9 +41,6 @@
         <button class="viz-btn" data-mode="circular">Circular</button>
         <button class="viz-btn" data-mode="particles">Particles</button>
         <button class="viz-btn" data-mode="starfield">Starfield</button>
-      </div>
-      <div id="vibe-toggle">
-        <button id="btn-vibe" title="Complete Vibe Mode (F)">⟐ VIBE MODE</button>
       </div>
     </div>
 
@@ -51,6 +69,14 @@
       </div>
     </div>
   </div>
+
+  <!-- Floating vibe mode button (outside UI overlay so it can persist) -->
+  <div id="vibe-toggle">
+    <button id="btn-vibe" title="Vibe Mode (F)">⟐ VIBE MODE</button>
+  </div>
+
+  <!-- Mouse interaction effects layer -->
+  <canvas id="mouse-fx"></canvas>
 
   <!-- Keyboard hints (shown briefly on load) -->
   <div id="help-overlay" class="hidden">

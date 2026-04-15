@@ -49,5 +49,10 @@ window.VIBE_CONFIG = {
   },
 
   // ── Vibe Mode ──
-  vibeMouseTimeout: 2500,       // ms before UI re-hides after mouse movement
+  vibeMouseTimeout: 2500,       // ms before cursor re-hides after mouse movement
+
+  // ── Drop Zone ──
+  // true  = show cauldron when no tracks are loaded (reusable/portfolio edition)
+  // false = hide cauldron, expect pre-bundled tracks/ folder
+  dropZoneEnabled: true,
 };

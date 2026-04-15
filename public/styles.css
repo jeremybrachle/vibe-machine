@@ -376,3 +376,264 @@ body {
 body.vibe-mode {
   cursor: none;
 }
+
+/* ── Floating Vibe Button (outside overlay) ── */
+#vibe-toggle {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 20;
+  pointer-events: auto;
+  transition: opacity 0.4s ease;
+}
+
+#vibe-toggle.vibe-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#vibe-toggle.vibe-hidden:hover,
+#vibe-toggle.vibe-hidden:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#vibe-toggle.vibe-active #btn-vibe {
+  background: rgba(var(--secondary-rgb), 0.4);
+  border-color: rgba(var(--secondary-rgb), 0.7);
+  box-shadow: 0 0 16px rgba(var(--secondary-rgb), 0.4);
+}
+
+/* ── Mouse FX Canvas ── */
+#mouse-fx {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── Queue Panel (bottom-right) ── */
+#queue-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 16px;
+  width: 280px;
+  max-height: 400px;
+  z-index: 15;
+  background: rgba(10, 10, 20, 0.92);
+  border: 1px solid rgba(var(--secondary-rgb), 0.25);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+
+#queue-panel.collapsed {
+  max-height: 40px;
+}
+
+#queue-panel.collapsed #queue-body {
+  display: none;
+}
+
+#queue-panel.queue-hidden {
+  transform: translateX(320px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#queue-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+#queue-title {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--secondary);
+  flex: 1;
+}
+
+#queue-count {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-right: 8px;
+}
+
+#btn-queue-toggle {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  transition: transform 0.2s;
+}
+
+#queue-panel.collapsed #btn-queue-toggle {
+  transform: rotate(-90deg);
+}
+
+#queue-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+#queue-drop-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-dim);
+  font-size: 11px;
+  transition: background 0.2s, color 0.2s;
+}
+
+#queue-drop-zone.drag-active {
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+}
+
+/* Mini cauldron in the drop zone */
+.cauldron-mini {
+  width: 28px;
+  height: 22px;
+  border-radius: 0 0 50% 50%;
+  background: rgba(var(--secondary-rgb), 0.1);
+  border: 1px solid rgba(var(--secondary-rgb), 0.25);
+  border-top: none;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cauldron-liquid-mini {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 55%;
+  background: linear-gradient(to top, rgba(var(--secondary-rgb), 0.35), rgba(var(--accent-rgb), 0.1));
+  border-radius: 0 0 50% 50%;
+}
+
+.blob-mini {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  mix-blend-mode: screen;
+}
+
+.blob-m1 {
+  width: 6px;
+  height: 6px;
+  background: rgba(var(--secondary-rgb), 0.5);
+  left: 25%;
+  bottom: 20%;
+  animation: bobble 2.5s ease-in-out infinite;
+}
+
+.blob-m2 {
+  width: 5px;
+  height: 5px;
+  background: rgba(var(--accent-rgb), 0.4);
+  left: 55%;
+  bottom: 30%;
+  animation: bobble 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes bobble {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.1); }
+}
+
+/* Queue track list */
+#queue-list {
+  list-style: none;
+  overflow-y: auto;
+  max-height: 280px;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--secondary-rgb), 0.2) transparent;
+}
+
+#queue-list::-webkit-scrollbar {
+  display: block;
+  width: 4px;
+}
+
+#queue-list::-webkit-scrollbar-thumb {
+  background: rgba(var(--secondary-rgb), 0.3);
+  border-radius: 2px;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  gap: 8px;
+}
+
+.queue-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+
+.queue-item.active {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.queue-item-num {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 18px;
+  text-align: right;
+}
+
+.queue-item.active .queue-item-num {
+  color: var(--accent);
+}
+
+.queue-item.active .queue-item-num::after {
+  content: '▶';
+  font-size: 8px;
+}
+
+.queue-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-item-cat {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Drag-over glow on queue panel itself */
+#queue-panel.drag-over-panel {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.15);
+}
