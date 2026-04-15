@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.argv[2] || 3000;
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const TRACKS_DIR = path.join(__dirname, 'tracks');
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -23,62 +25,53 @@ const MIME_TYPES = {
 
 const AUDIO_EXTENSIONS = new Set(['.ogg', '.mp3', '.wav', '.flac', '.m4a', '.aac', '.webm']);
 
-const server = http.createServer((req, res) => {
-  // Sanitize the URL to prevent path traversal
-  const url = new URL(req.url, `http://localhost:${PORT}`);
-  let filePath = path.join(__dirname, decodeURIComponent(url.pathname));
-  const resolvedPath = path.resolve(filePath);
-  if (!resolvedPath.startsWith(path.resolve(__dirname))) {
-    res.writeHead(403);
-    res.end('Forbidden');
-    return;
-  }
+// ── Route Handlers ──
 
-  if (url.pathname === '/') filePath = path.join(__dirname, 'index.html');
-
-  // Special route: list tracks
-  // Supports both flat (tracks/song.mp3) and categorized (tracks/rock/song.mp3) layouts.
-  if (url.pathname === '/api/tracks') {
-    const tracksDir = path.join(__dirname, 'tracks');
-    try {
-      const entries = fs.readdirSync(tracksDir, { withFileTypes: true });
-      const allTracks = [];
-
-      // Flat files in tracks/
-      entries
-        .filter(e => !e.isDirectory() && AUDIO_EXTENSIONS.has(path.extname(e.name).toLowerCase()))
-        .forEach(e => allTracks.push({
-          name: e.name.replace(/\.[^.]+$/, '').replace(/\./g, ' '),
-          file: `tracks/${e.name}`,
-          category: 'uncategorized',
-        }));
-
-      // Subdirectories as categories
-      entries
-        .filter(d => d.isDirectory())
-        .forEach(d => {
-          fs.readdirSync(path.join(tracksDir, d.name))
-            .filter(f => AUDIO_EXTENSIONS.has(path.extname(f).toLowerCase()))
-            .forEach(f => allTracks.push({
-              name: f.replace(/\.[^.]+$/, '').replace(/\./g, ' '),
-              file: `tracks/${d.name}/${f}`,
-              category: d.name,
-            }));
-        });
-
+function handleTrackList(res) {
+  try {
+    if (!fs.existsSync(TRACKS_DIR)) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(allTracks));
-    } catch (e) {
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: e.message }));
+      res.end(JSON.stringify([]));
+      return;
     }
-    return;
-  }
 
+    const entries = fs.readdirSync(TRACKS_DIR, { withFileTypes: true });
+    const allTracks = [];
+
+    // Flat files in tracks/
+    entries
+      .filter(e => !e.isDirectory() && AUDIO_EXTENSIONS.has(path.extname(e.name).toLowerCase()))
+      .forEach(e => allTracks.push({
+        name: e.name.replace(/\.[^.]+$/, '').replace(/\./g, ' '),
+        file: `tracks/${e.name}`,
+        category: 'uncategorized',
+      }));
+
+    // Subdirectories as categories
+    entries
+      .filter(d => d.isDirectory())
+      .forEach(d => {
+        fs.readdirSync(path.join(TRACKS_DIR, d.name))
+          .filter(f => AUDIO_EXTENSIONS.has(path.extname(f).toLowerCase()))
+          .forEach(f => allTracks.push({
+            name: f.replace(/\.[^.]+$/, '').replace(/\./g, ' '),
+            file: `tracks/${d.name}/${f}`,
+            category: d.name,
+          }));
+      });
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(allTracks));
+  } catch (e) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: e.message }));
+  }
+}
+
+function serveFile(filePath, req, res) {
   const ext = path.extname(filePath).toLowerCase();
   const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  // Support range requests for audio seeking
   fs.stat(filePath, (err, stat) => {
     if (err) {
       res.writeHead(404);
@@ -109,13 +102,53 @@ const server = http.createServer((req, res) => {
       fs.createReadStream(filePath).pipe(res);
     }
   });
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`\n  🎵 Vibe Machine`);
-  console.log(`  ════════════════`);
-  console.log(`  Running at http://localhost:${PORT}`);
-  console.log(`  Tracks:   ./tracks/<category>/<file>`);
-  console.log(`  Config:   ./config.js`);
-  console.log(`  Press Ctrl+C to stop\n`);
-});
+// ── Request Router ──
+
+function handleRequest(req, res) {
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const pathname = decodeURIComponent(url.pathname);
+
+  // API: list tracks
+  if (pathname === '/api/tracks') {
+    return handleTrackList(res);
+  }
+
+  // Resolve file path based on route
+  let filePath;
+  if (pathname === '/') {
+    filePath = path.join(PUBLIC_DIR, 'index.html');
+  } else if (pathname.startsWith('/tracks/')) {
+    filePath = path.join(__dirname, pathname);
+  } else {
+    filePath = path.join(PUBLIC_DIR, pathname);
+  }
+
+  // Sanitize to prevent path traversal
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith(path.resolve(__dirname))) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  serveFile(filePath, req, res);
+}
+
+// ── Server ──
+
+const server = http.createServer(handleRequest);
+
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`\n  🎵 Vibe Machine`);
+    console.log(`  ════════════════`);
+    console.log(`  Running at http://localhost:${PORT}`);
+    console.log(`  Tracks:   ./tracks/<category>/<file>`);
+    console.log(`  Config:   ./public/config.js`);
+    console.log(`  Press Ctrl+C to stop\n`);
+  });
+}
+
+module.exports = { server, MIME_TYPES, AUDIO_EXTENSIONS, PUBLIC_DIR, TRACKS_DIR };

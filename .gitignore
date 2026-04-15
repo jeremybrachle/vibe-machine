@@ -2,7 +2,11 @@
 node_modules/
 
 # Audio files — add your own, don't commit them
-tracks/
+tracks/*
+!tracks/.gitkeep
+
+# Test coverage
+coverage/
 
 # OS files
 .DS_Store

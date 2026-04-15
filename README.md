@@ -41,11 +41,17 @@ node server.js 8080
 
 ## Prerequisites
 
-- Node.js (v14+)
+- Node.js (v18+)
 - A browser
 - Audio files you legally own rights to play
 
-That's it. The entire dependency list is the Node.js standard library.
+That's it. The runtime has zero production dependencies — just the Node.js standard library.
+
+For development (testing):
+
+```bash
+npm install
+```
 
 ## Keyboard Shortcuts
 
@@ -79,7 +85,7 @@ The server scans `tracks/` on each request, so you can add or remove files witho
 
 ## Configuration
 
-All branding, colors, and behavior live in [`config.js`](config.js):
+All branding, colors, and behavior live in [`config.js`](public/config.js):
 
 ```js
 window.VIBE_CONFIG = {
@@ -100,7 +106,7 @@ window.VIBE_CONFIG = {
 
 ## Adding a Custom Visualizer
 
-1. Create `visualizers/yourmode.js` exposing a global object:
+1. Create `public/visualizers/yourmode.js` exposing a global object:
 
 ```js
 window.VisualizerYourmode = {
@@ -111,19 +117,34 @@ window.VisualizerYourmode = {
 };
 ```
 
-2. Add a `<script>` tag in `index.html` before `app.js`
-3. Add a button in `#viz-modes` in `index.html`
-4. Add `'yourmode'` to the `visualizers` array in `config.js`
+2. Add a `<script>` tag in `public/index.html` before `app.js`
+3. Add a button in `#viz-modes` in `public/index.html`
+4. Add `'yourmode'` to the `visualizers` array in `public/config.js`
 
 ## Architecture
 
 ```
-server.js          → Zero-dependency Node.js static server + /api/tracks endpoint
-index.html         → Single-page shell, loads everything via <script> tags
-styles.css         → Dark theme with CSS custom properties driven by config
-config.js          → All settings in one place (branding, audio, theme, behavior)
-app.js             → Main controller (audio pipeline, state, keyboard, UI logic)
-visualizers/*.js   → Each mode is a standalone draw() function using Canvas 2D
+vibe-machine/
+├── server.js                → Node.js static server + /api/tracks endpoint
+├── jest.config.js           → Test runner configuration
+├── .editorconfig            → Consistent formatting across editors
+├── .github/
+│   └── workflows/ci.yml     → CI pipeline (tests on push & PR)
+├── public/                  → Client assets (served as static files)
+│   ├── index.html           → Single-page shell
+│   ├── styles.css           → Dark theme with CSS custom properties
+│   ├── config.js            → All settings (branding, audio, theme)
+│   ├── app.js               → Main controller (audio, state, UI)
+│   └── visualizers/         → Each mode is a standalone draw() function
+│       ├── bars.js
+│       ├── waveform.js
+│       ├── circular.js
+│       ├── particles.js
+│       └── starfield.js
+├── tests/                   → Test suite
+│   ├── server.test.js       → Server integration & unit tests
+│   └── config.test.js       → Config schema validation
+└── tracks/                  → Your music (gitignored)
 ```
 
 The audio pipeline: `<audio> → MediaElementSource → AnalyserNode → GainNode → destination`
@@ -138,7 +159,23 @@ Each visualization mode receives the AnalyserNode and renders directly to a full
 | Audio analysis | Web Audio API AnalyserNode |
 | Server | Node.js `http` + `fs` (stdlib only) |
 | Styling | Vanilla CSS with custom properties |
+| Testing | Jest (server + config validation) |
+| CI | GitHub Actions (Node 18/20/22 matrix) |
 | Build system | There isn't one. You're welcome. |
+
+## The Anti-Vibe
+
+We unironically named this thing "Vibe Machine" and then gave it a CI pipeline.
+
+Behind the particles and starfields, this project follows the same engineering practices you'd expect from production software:
+
+- **Automated CI** — GitHub Actions runs the full test suite on every push to `main` and on every pull request, across Node 18, 20, and 22
+- **Unit & integration tests** — Server endpoints, path traversal protection, MIME type handling, audio format detection, and config schema validation
+- **Structured codebase** — Client code in `public/`, server logic at root, tests isolated in `tests/`, CI in `.github/`
+- **Testable architecture** — Server exports its handler and constants for direct testing; conditional `listen()` keeps the module importable
+- **Editor consistency** — `.editorconfig` enforces formatting conventions across contributors
+
+Because even a project called "Vibe Machine" should pass a code review.
 
 ## License
 
