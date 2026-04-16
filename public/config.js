@@ -32,7 +32,7 @@ window.VIBE_CONFIG = {
   // To add a new visualizer: create visualizers/myvis.js exposing
   //   window.VisualizerMyvis = { name: 'myvis', draw(ctx, canvas, analyser, data, len) {} }
   // then add 'myvis' here and add a <script> tag in index.html.
-  visualizers: ['blank', 'bars', 'waveform', 'circular', 'particles', 'starfield', 'pixelgrid', 'beach-alt1'],
+  visualizers: ['blank', 'bars', 'waveform', 'circular', 'particles', 'starfield', 'pixelgrid', 'sunset', 'starrynight', 'piano'],
   defaultVisualizer: 0,         // Index into the array above (0 = blank)
 
   // ── Theme Colors ──

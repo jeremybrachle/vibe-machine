@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vibe Machine</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="config.js?v=2"></script>
+  <link rel="stylesheet" href="styles.css?v=6">
+  <script src="config.js?v=3"></script>
 </head>
 <body>
   <canvas id="visualizer"></canvas>
@@ -43,7 +43,9 @@
         <button class="viz-btn" data-mode="particles">Particles</button>
         <button class="viz-btn" data-mode="starfield">Starfield</button>
         <button class="viz-btn" data-mode="pixelgrid">Pixel Grid</button>
-        <button class="viz-btn" data-mode="beach-alt1">Beach</button>
+        <button class="viz-btn" data-mode="sunset">Sunset</button>
+        <button class="viz-btn" data-mode="starrynight">Starry Night</button>
+        <button class="viz-btn" data-mode="piano">Piano</button>
       </div>
       <div id="viz-options" class="viz-options hidden"></div>
     </div>
@@ -97,6 +99,65 @@
   <!-- Mouse interaction effects layer -->
   <canvas id="mouse-fx"></canvas>
 
+  <!-- Info button (bottom-left, ghost until hover) -->
+  <div id="info-btn-wrap">
+    <button id="btn-info" title="About Vibe Machine">i</button>
+  </div>
+
+  <!-- Info overlay -->
+  <div id="info-overlay" class="info-hidden">
+    <div id="info-content">
+      <div id="info-close-wrap">
+        <button id="btn-info-close" title="Close">✕</button>
+      </div>
+      <div id="info-body">
+        <div id="info-logo">⟐</div>
+        <h2 id="info-title">Vibe Machine</h2>
+        <p class="info-tagline">Real-time audio-reactive visualizer.<br>No frameworks. No build tools. Just vibes.</p>
+        <p class="info-version">v1.0</p>
+
+        <div class="info-divider"></div>
+
+        <div class="info-section">
+          <h3>The Numbers</h3>
+          <div class="info-stats">
+            <div class="info-stat">
+              <span class="info-stat-val">10</span>
+              <span class="info-stat-label">Visualizers</span>
+            </div>
+            <div class="info-stat">
+              <span class="info-stat-val">4</span>
+              <span class="info-stat-label">Effects</span>
+            </div>
+            <div class="info-stat">
+              <span class="info-stat-val">4</span>
+              <span class="info-stat-label">Sky Modes</span>
+            </div>
+            <div class="info-stat info-stat-big">
+              <span class="info-stat-val">640</span>
+              <span class="info-stat-label">Possible Combinations</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3>Built With</h3>
+          <p class="info-stack-items">
+            <span class="info-chip">HTML5 Canvas</span>
+            <span class="info-chip">Web Audio API</span>
+            <span class="info-chip">Vanilla JS</span>
+            <span class="info-chip">Zero deps</span>
+          </p>
+        </div>
+
+        <div class="info-divider"></div>
+
+        <p class="info-footer">Built with questionable amounts of vibe-coding.</p>
+        <p class="info-legal">&copy; 2026 Jeremy Brachle. All rights reserved. No part of this software, its design, visual identity, or underlying concepts and vibes may be reproduced, distributed, modified, or re-vibed in any form without prior written permission from the author. Unauthorized publication or vibery will be met with the full extent of applicable intellectual property law.<br>Happy Vibing</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Keyboard hints (shown briefly on load) -->
   <div id="help-overlay" class="hidden">
     <div id="help-content">
@@ -123,15 +184,17 @@
     </div>
   </div>
 
-  <script src="visualizers/blank.js?v=2"></script>
-  <script src="visualizers/bars.js?v=2"></script>
-  <script src="visualizers/waveform.js?v=2"></script>
-  <script src="visualizers/circular.js?v=2"></script>
-  <script src="visualizers/particles.js?v=2"></script>
-  <script src="visualizers/starfield.js?v=2"></script>
-  <script src="visualizers/pixelgrid.js?v=3"></script>
-  <script src="visualizers/beach-alt1.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="visualizers/blank.js?v=3"></script>
+  <script src="visualizers/bars.js?v=3"></script>
+  <script src="visualizers/waveform.js?v=3"></script>
+  <script src="visualizers/circular.js?v=3"></script>
+  <script src="visualizers/particles.js?v=3"></script>
+  <script src="visualizers/starfield.js?v=3"></script>
+  <script src="visualizers/pixelgrid.js?v=4"></script>
+  <script src="visualizers/sunset.js?v=5"></script>
+  <script src="visualizers/starrynight.js?v=3"></script>
+  <script src="visualizers/piano.js?v=2"></script>
+  <script src="app.js?v=8"></script>
   <script>
     // Apply config-driven branding to DOM
     (function() {

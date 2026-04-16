@@ -59,25 +59,11 @@ window.VisualizerBeachAlt1 = {
         let hue, sat, lum;
 
         if (ny > horizon) {
-          // Water / sand — warm reflection spreads across full width
+          // Water / sand — uniform cool ocean
           const depth = Math.min(1, (ny - horizon) / 0.35);
-          const reflDist = Math.abs(nx - sunX);
-
-          // Base water: warm tones near sun, cooler toward edges
-          const warmth = Math.max(0, 1 - reflDist / 0.6);
-          hue = 210 - warmth * 180; // 210 (blue) → 30 (warm gold) near sun
-          sat = 25 + energy * 20 + warmth * 40;
-          lum = 10 + (1 - depth) * 14 + energy * 6 + warmth * 10;
-
-          // Sun reflection shimmer — full width, strongest near center
-          const reflStr = Math.pow(Math.max(0, 1 - reflDist / 0.5), 1.5)
-            * Math.max(0, 1 - (ny - horizon) / 0.3);
-          if (reflStr > 0) {
-            const shimmer = Math.sin(x * 2.1 + t * 3 + y * 0.8) * 0.5 + 0.5;
-            hue = hue + (35 - hue) * reflStr;
-            sat = sat + (80 - sat) * reflStr;
-            lum += reflStr * shimmer * 35 * (0.7 + bass * 0.3);
-          }
+          hue = 210 + depth * 20;
+          sat = 25 + energy * 20;
+          lum = 10 + (1 - depth) * 14 + energy * 6;
         } else {
           // Sky
           const skyH = Math.max(0, (sunY - ny) / sunY);

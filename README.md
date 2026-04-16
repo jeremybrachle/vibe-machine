@@ -6,15 +6,32 @@ A real-time, audio-reactive music visualizer built entirely with vanilla JavaScr
 
 ## Demo
 
-Drop your music into `tracks/`, start the server, and hit play. Five visualization modes react to your audio in real time:
+Drop your music into `tracks/`, start the server, and hit play. Ten visualization modes react to your audio in real time — with 640 possible style combinations.
 
 | Mode | Description |
 |---|---|
+| **Blank** | Clean canvas — just the overlays |
 | **Bars** | Classic frequency EQ with peak caps and reflections |
 | **Waveform** | Neon oscilloscope with glow layers |
 | **Circular** | Radial frequency ring with inner glow |
 | **Particles** | Physics-based particle system with connection lines |
 | **Starfield** | WMP-nostalgia stars flying at your face |
+| **Pixel Grid** | Retro pixelated frequency grid |
+| **Sunset** | Pixel-art horizon with reactive sky palette |
+| **Starry Night** | Van Gogh-inspired pixel starscape with shooting stars |
+| **Piano** | 88-key player piano with frequency-mapped EQ bars |
+
+### Effect Layers
+
+| Effect | Description |
+|---|---|
+| **Sun / Moon / Disco** | Draggable sky object that cycles through 4 modes |
+| **Lo-fi Grid** | Pixel edge overlay for CRT aesthetic |
+| **Amplitude Bars** | Subtle frequency bars behind the UI |
+| **Mouse Particles** | Cursor-following particle trails |
+| **Transitions** | Configurable crossfade between visualizers |
+
+> **640 combinations** = 10 visualizers × 4 sky modes × 2⁴ binary effect toggles
 
 ## Quick Start
 
@@ -95,12 +112,18 @@ npm install
 | `←` / `P` | Previous track |
 | `S` | Toggle shuffle |
 | `V` | Cycle visualizer |
-| `1`–`5` | Jump to specific visualizer |
+| `1`–`9`, `0` | Jump to visualizer / Reset defaults |
 | `F` / `Enter` | Vibe Mode (hide UI, mouse effects only) |
 | `M` | Mute / Unmute |
 | `↑` / `↓` | Volume |
+| `T` | Toggle transitions |
+| `L` | Toggle lo-fi grid |
+| `A` | Toggle amplitude bars |
+| `R` | Shuffle all settings |
+| `Q` | Toggle queue panel |
+| `I` | Info / About |
 | `?` | Keyboard shortcut help |
-| `Esc` | Exit Vibe Mode |
+| `Esc` | Close overlay / Exit Vibe Mode |
 
 ## Track Organization
 
@@ -159,6 +182,7 @@ window.VisualizerYourmode = {
 ```
 vibe-machine/
 ├── server.js                → Node.js static server + /api/tracks endpoint
+├── electron-main.js         → Electron desktop wrapper
 ├── jest.config.js           → Test runner configuration
 ├── .editorconfig            → Consistent formatting across editors
 ├── .github/
@@ -167,13 +191,18 @@ vibe-machine/
 │   ├── index.html           → Single-page shell
 │   ├── styles.css           → Dark theme with CSS custom properties
 │   ├── config.js            → All settings (branding, audio, theme)
-│   ├── app.js               → Main controller (audio, state, UI)
+│   ├── app.js               → Main controller (audio, state, UI, render loop)
 │   └── visualizers/         → Each mode is a standalone draw() function
+│       ├── blank.js
 │       ├── bars.js
 │       ├── waveform.js
 │       ├── circular.js
 │       ├── particles.js
-│       └── starfield.js
+│       ├── starfield.js
+│       ├── pixelgrid.js
+│       ├── sunset.js
+│       ├── starrynight.js
+│       └── piano.js
 ├── tests/                   → Test suite
 │   ├── server.test.js       → Server integration & unit tests
 │   └── config.test.js       → Config schema validation
@@ -191,9 +220,11 @@ Each visualization mode receives the AnalyserNode and renders directly to a full
 | Rendering | HTML5 Canvas 2D |
 | Audio analysis | Web Audio API AnalyserNode |
 | Server | Node.js `http` + `fs` (stdlib only) |
+| Desktop | Electron (optional) |
 | Styling | Vanilla CSS with custom properties |
 | Testing | Jest (server + config validation) |
 | CI | GitHub Actions (Node 18/20/22 matrix) |
+| Runtime deps | Zero. None. Nada. |
 | Build system | There isn't one. You're welcome. |
 
 ## The Anti-Vibe
@@ -207,9 +238,12 @@ Behind the particles and starfields, this project follows the same engineering p
 - **Structured codebase** — Client code in `public/`, server logic at root, tests isolated in `tests/`, CI in `.github/`
 - **Testable architecture** — Server exports its handler and constants for direct testing; conditional `listen()` keeps the module importable
 - **Editor consistency** — `.editorconfig` enforces formatting conventions across contributors
+- **Keep-a-Changelog-compliant CHANGELOG** — A [150-line changelog](CHANGELOG.md) for v1.0, the first and only version, complete with a codename, KPIs, a migration guide from nothing, and a Technical Specifications table
 
 Because even a project called "Vibe Machine" should pass a code review.
 
+See [`ANTI-VIBE.md`](ANTI-VIBE.md) for the full self-aware accounting of every engineering decision that didn't need to happen.
+
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — Copyright (c) 2026 Jeremy Brachle

@@ -29,7 +29,9 @@
   let transitionEnabled = (CFG.transitionEnabled === true);
   let transitionDuration = CFG.transitionDuration || 5;
   let transitionAlpha = 1;
-  let sunArcEnabled = (CFG.sunArcEnabled === true);
+  let sunArcMode = CFG.sunArcEnabled === true ? 'sun' : 'off';
+  const SUN_ARC_MODES = ['off', 'sun', 'moon', 'disco'];
+  const SUN_ARC_ICONS = { off: '☀', sun: '☀', moon: '🌙', disco: '🪩' };
   let lofiGridEnabled = (CFG.lofiGridEnabled === true);
   let ampBarsEnabled = (CFG.ampBarsEnabled === true);
   let mouseFxEnabled = (CFG.mouseFxEnabled === true);
@@ -45,7 +47,9 @@
     window.VisualizerParticles,
     window.VisualizerStarfield,
     window.VisualizerPixelgrid,
-    window.VisualizerBeachAlt1,
+    window.VisualizerSunset,
+    window.VisualizerStarrynight,
+    window.VisualizerPiano,
   ];
 
   // ── DOM ──
@@ -415,8 +419,10 @@
   }
 
   function toggleSunArc() {
-    sunArcEnabled = !sunArcEnabled;
-    btnSunArc.classList.toggle('active', sunArcEnabled);
+    const idx = SUN_ARC_MODES.indexOf(sunArcMode);
+    sunArcMode = SUN_ARC_MODES[(idx + 1) % SUN_ARC_MODES.length];
+    btnSunArc.classList.toggle('active', sunArcMode !== 'off');
+    btnSunArc.textContent = SUN_ARC_ICONS[sunArcMode] || '☀';
   }
 
   function toggleLofiGrid() {
@@ -452,8 +458,9 @@
     transitionEnabled = randBool();
     btnTransition.classList.toggle('active', transitionEnabled);
 
-    sunArcEnabled = randBool();
-    btnSunArc.classList.toggle('active', sunArcEnabled);
+    sunArcMode = SUN_ARC_MODES[Math.floor(Math.random() * SUN_ARC_MODES.length)];
+    btnSunArc.classList.toggle('active', sunArcMode !== 'off');
+    btnSunArc.textContent = SUN_ARC_ICONS[sunArcMode] || '☀';
 
     lofiGridEnabled = randBool();
     btnLofiGrid.classList.toggle('active', lofiGridEnabled);
@@ -487,8 +494,9 @@
     transitionEnabled = false;
     btnTransition.classList.remove('active');
     transitionAlpha = 0;
-    sunArcEnabled = false;
+    sunArcMode = 'off';
     btnSunArc.classList.remove('active');
+    btnSunArc.textContent = '☀';
     lofiGridEnabled = false;
     btnLofiGrid.classList.remove('active');
     ampBarsEnabled = false;
@@ -622,7 +630,11 @@
         resetDefaults();
         break;
       case 'Escape':
-        if (isVibeMode) toggleVibeMode();
+        if (infoOpen) closeInfo();
+        else if (isVibeMode) toggleVibeMode();
+        break;
+      case 'i':
+        if (!infoOpen) toggleInfo();
         break;
     }
   });
@@ -820,7 +832,7 @@
   }
 
   function renderSunArc() {
-    if (!sunArcEnabled || !audio || !isFinite(audio.duration) || audio.duration === 0) return;
+    if (sunArcMode === 'off' || !audio || !isFinite(audio.duration) || audio.duration === 0) return;
     if (!isPlaying && audio.currentTime === 0) return;
 
     const w = window.innerWidth;
@@ -877,22 +889,73 @@
 
         let hue, sat, lum, alpha;
 
-        if (dist <= coreR) {
-          const f = dist / coreR;
-          hue = 45 - f * 10;
-          sat = 95 - f * 15;
-          lum = 95 - f * 30;
-          alpha = 0.9 - f * 0.15;
-        } else {
-          const f = (dist - coreR) / (glowR - coreR);
-          hue = 35 - f * 15;
-          sat = 80 - f * 25;
-          lum = 50 * Math.pow(1 - f, 1.5);
-          alpha = 0.45 * Math.pow(1 - f, 2);
-        }
+        if (sunArcMode === 'sun') {
+          if (dist <= coreR) {
+            const f = dist / coreR;
+            hue = 45 - f * 10;
+            sat = 95 - f * 15;
+            lum = 95 - f * 30;
+            alpha = 0.9 - f * 0.15;
+          } else {
+            const f = (dist - coreR) / (glowR - coreR);
+            hue = 35 - f * 15;
+            sat = 80 - f * 25;
+            lum = 50 * Math.pow(1 - f, 1.5);
+            alpha = 0.45 * Math.pow(1 - f, 2);
+          }
+          lum += Math.sin(col * 0.9 + row * 0.7 + t * 1.5) * 2.5;
+          alpha *= 0.92 + Math.sin(col * 0.4 + t * 0.8) * 0.08;
 
-        lum += Math.sin(col * 0.9 + row * 0.7 + t * 1.5) * 2.5;
-        alpha *= 0.92 + Math.sin(col * 0.4 + t * 0.8) * 0.08;
+        } else if (sunArcMode === 'moon') {
+          // Crescent moon: carve a dark circle offset from the bright disc
+          const cutDX = dx - 1.8;
+          const cutDY = dy - 0.6;
+          const cutDist = Math.sqrt(cutDX * cutDX + cutDY * cutDY);
+          const inCut = cutDist < coreR * 0.85;
+
+          if (dist <= coreR && !inCut) {
+            const f = dist / coreR;
+            hue = 215 + f * 15;
+            sat = 15 + f * 10;
+            lum = 90 - f * 20;
+            alpha = 0.85 - f * 0.1;
+          } else if (!inCut) {
+            const f = (dist - coreR) / (glowR - coreR);
+            hue = 220;
+            sat = 20 - f * 10;
+            lum = 35 * Math.pow(1 - f, 1.8);
+            alpha = 0.3 * Math.pow(1 - f, 2.2);
+          } else {
+            continue; // skip the cut-out area
+          }
+          lum += Math.sin(col * 0.5 + row * 0.3 + t * 0.6) * 1.5;
+          alpha *= 0.95 + Math.sin(col * 0.3 + t * 0.4) * 0.05;
+
+        } else if (sunArcMode === 'disco') {
+          // Disco ball: mirrored facets with rotating color reflections
+          if (dist > coreR + 3) {
+            // Scattered light rays
+            const rayAngle = Math.atan2(dy, dx);
+            const rayIdx = Math.floor(((rayAngle + Math.PI) / (Math.PI * 2)) * 12 + t * 2) % 12;
+            const rayF = (dist - coreR - 3) / (glowR - coreR - 3);
+            if (rayF > 1 || rayF < 0) continue;
+            hue = (rayIdx * 30 + t * 60) % 360;
+            sat = 80;
+            lum = 55 * Math.pow(1 - rayF, 2);
+            alpha = 0.35 * Math.pow(1 - rayF, 2) * (0.5 + 0.5 * Math.sin(rayIdx * 1.7 + t * 3));
+          } else if (dist <= coreR + 3) {
+            // The ball itself: silver with faceted grid
+            const facetX = Math.floor((dx + coreR) * 2.5);
+            const facetY = Math.floor((dy + coreR) * 2.5);
+            const facetPhase = facetX * 3.7 + facetY * 5.3 + t * 4;
+            const sparkle = 0.5 + 0.5 * Math.sin(facetPhase);
+            hue = (facetX * 40 + facetY * 60 + t * 80) % 360;
+            sat = 30 + sparkle * 50;
+            lum = 40 + sparkle * 50;
+            alpha = 0.8;
+          }
+          // no shimmer overlay needed, facets already sparkle
+        }
 
         if (alpha < 0.01 || lum < 1) continue;
 
@@ -1152,7 +1215,7 @@
     if (e.target.closest('#ui-overlay, #vibe-toggle, #queue-panel, #help-overlay, #transition-controls')) return;
 
     // Check if clicking near the sun to start dragging
-    if (sunArcEnabled && isPlaying) {
+    if (sunArcMode !== 'off' && isPlaying) {
       const arcPos = getSunArcPos();
       const sx = sunDragX !== null ? sunDragX : (arcPos ? arcPos.x : null);
       const sy = sunDragY !== null ? sunDragY : (arcPos ? arcPos.y : null);
@@ -1336,11 +1399,48 @@
     transitionSlider.value = CFG.transitionDuration;
     transitionLabel.textContent = CFG.transitionDuration + 's';
   }
-  btnSunArc.classList.toggle('active', sunArcEnabled);
+  btnSunArc.classList.toggle('active', sunArcMode !== 'off');
+  btnSunArc.textContent = SUN_ARC_ICONS[sunArcMode] || '☀';
   btnLofiGrid.classList.toggle('active', lofiGridEnabled);
   btnAmpBars.classList.toggle('active', ampBarsEnabled);
   btnMouseFx.classList.toggle('active', mouseFxEnabled);
   btnTransition.classList.toggle('active', transitionEnabled);
+
+  // ── Info overlay ──
+  const infoOverlay = document.getElementById('info-overlay');
+  const btnInfo = document.getElementById('btn-info');
+  const btnInfoClose = document.getElementById('btn-info-close');
+  let infoOpen = false;
+
+  function openInfo() {
+    if (infoOpen) return;
+    infoOpen = true;
+    infoOverlay.classList.remove('info-hidden');
+    // Force reflow before adding visible class for transition
+    void infoOverlay.offsetHeight;
+    infoOverlay.classList.add('info-visible');
+  }
+
+  function closeInfo() {
+    if (!infoOpen) return;
+    infoOpen = false;
+    infoOverlay.classList.remove('info-visible');
+    setTimeout(() => {
+      infoOverlay.classList.add('info-hidden');
+    }, 400);
+  }
+
+  function toggleInfo() {
+    if (infoOpen) closeInfo();
+    else openInfo();
+  }
+
+  btnInfo.addEventListener('click', toggleInfo);
+  btnInfoClose.addEventListener('click', closeInfo);
+
+  infoOverlay.addEventListener('click', (e) => {
+    if (e.target === infoOverlay) closeInfo();
+  });
 
   loadTracks();
 

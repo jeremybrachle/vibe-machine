@@ -55,10 +55,24 @@ Neither the "I just want vibes" crowd nor the "show me your architecture diagram
 | Metric | Count |
 |--------|-------|
 | Anti-vibe tests added | 11 |
+| Anti-vibe patterns documented | 4 |
 | Security vulnerabilities prevented | 0 (realistically) |
 | Performance improved on localhost | unmeasurable |
 | Vibes killed in the process | several |
 | People who will read the `Allow: GET` header | 0 |
+| Changelog entries for v1.0 | 1 (but it's 150 lines long) |
+
+---
+
+## Pattern #4: A Keep-a-Changelog-Compliant Changelog for v1.0
+
+**What we did:** Created a `CHANGELOG.md` that follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). For the first and only version. It includes a release summary with a codename ("The Full Vibe"), Key Performance Indicators, a Technical Specifications table, a Migration Guide (from nothing), Impact Assessment Levels, a Vibe Disruption Index, and a Known Issues section that says "None."
+
+**What it documents:** The initial release. The one where everything was added, because nothing existed before it. Every line item in the "Added" section describes a feature being added for the first time, to a project that had no previous version. The Migration Guide section helpfully notes that there is nothing to migrate from.
+
+**Why it's anti-vibe:** The changelog is longer than most of the visualizer source files it documents. `blank.js` — the visualizer that draws nothing — has its own changelog entry with an Impact Assessment Level classification. We assigned a governance body ("Vibe Integrity Board") to review changelog entries for a project with one contributor. The Technical Specifications table lists "Lines of changelog for v1.0" as a metric. The file links to a release tag URL that doesn't exist yet.
+
+**Vibe-correct alternative:** `git log`. Or nothing. Ship it and let people find out what it does by clicking things, which is what they were going to do anyway because nobody reads changelogs for audio visualizers.
 
 ---
 
