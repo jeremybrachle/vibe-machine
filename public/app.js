@@ -25,12 +25,27 @@
   let currentVizIndex = 0;
   let animFrame = null;
 
+  // ── Transition State ──
+  let transitionEnabled = (CFG.transitionEnabled === true);
+  let transitionDuration = CFG.transitionDuration || 5;
+  let transitionAlpha = 1;
+  let sunArcEnabled = (CFG.sunArcEnabled === true);
+  let lofiGridEnabled = (CFG.lofiGridEnabled === true);
+  let ampBarsEnabled = (CFG.ampBarsEnabled === true);
+  let mouseFxEnabled = (CFG.mouseFxEnabled === true);
+  let sunDragX = null, sunDragY = null;
+  let isDraggingSun = false;
+  let sunReturning = false;
+
   const visualizers = [
+    window.VisualizerBlank,
     window.VisualizerBars,
     window.VisualizerWaveform,
     window.VisualizerCircular,
     window.VisualizerParticles,
     window.VisualizerStarfield,
+    window.VisualizerPixelgrid,
+    window.VisualizerBeachAlt1,
   ];
 
   // ── DOM ──
@@ -51,6 +66,13 @@
   const timeCurrent = document.getElementById('time-current');
   const timeTotal = document.getElementById('time-total');
   const vizButtons = document.querySelectorAll('.viz-btn');
+  const btnTransition = document.getElementById('btn-transition');
+  const transitionSlider = document.getElementById('transition-slider');
+  const transitionLabel = document.getElementById('transition-label');
+  const btnSunArc = document.getElementById('btn-sun-arc');
+  const btnLofiGrid = document.getElementById('btn-lofi-grid');
+  const btnAmpBars = document.getElementById('btn-amp-bars');
+  const btnMouseFx = document.getElementById('btn-mouse-fx');
 
   // ── Canvas Resize ──
   function resizeCanvas() {
@@ -246,11 +268,42 @@
   }
 
   // ── Visualization ──
+  const vizOptionsEl = document.getElementById('viz-options');
+
   function setVisualizer(index) {
     currentVizIndex = ((index % visualizers.length) + visualizers.length) % visualizers.length;
     vizButtons.forEach((btn, i) => btn.classList.toggle('active', i === currentVizIndex));
     // Clear canvas for clean transition
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Show/hide per-visualizer option toggles
+    updateVizOptions();
+  }
+
+  function setVisualizerByName(name) {
+    const idx = visualizers.findIndex(v => v && v.name === name);
+    if (idx >= 0) setVisualizer(idx);
+  }
+
+  function updateVizOptions() {
+    const viz = visualizers[currentVizIndex];
+    if (!viz || !viz.options || Object.keys(viz.options).length === 0) {
+      vizOptionsEl.classList.add('hidden');
+      vizOptionsEl.innerHTML = '';
+      return;
+    }
+    vizOptionsEl.classList.remove('hidden');
+    vizOptionsEl.innerHTML = '';
+    for (const [key, opt] of Object.entries(viz.options)) {
+      const btn = document.createElement('button');
+      btn.className = 'viz-opt-btn' + (opt.value ? ' active' : '');
+      btn.textContent = opt.label;
+      btn.title = 'Toggle ' + opt.label;
+      btn.addEventListener('click', () => {
+        opt.value = !opt.value;
+        btn.classList.toggle('active', opt.value);
+      });
+      vizOptionsEl.appendChild(btn);
+    }
   }
 
   function cycleVisualizer() {
@@ -274,12 +327,61 @@
       viz.draw(ctx, drawCanvas, analyser, dataArray, bufferLength);
     }
 
-    // Render mouse interaction particles
+    // Apply pixel-edge post-process to the main canvas
+    if (lofiGridEnabled) {
+      pixelateCanvas();
+    }
+
+    // Update and render transition + mouse particles
+    updateTransitionAlpha();
     renderMouseFx();
+  }
+
+  // ── Pixel Edge Post-Process ──
+  const pxPostCanvas = document.createElement('canvas');
+  const pxPostCtx = pxPostCanvas.getContext('2d');
+
+  function pixelateCanvas() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const cell = 8;
+    const gap = 2;
+    const step = cell + gap;
+    const smallW = Math.ceil(w / step);
+    const smallH = Math.ceil(h / step);
+
+    if (pxPostCanvas.width !== smallW || pxPostCanvas.height !== smallH) {
+      pxPostCanvas.width = smallW;
+      pxPostCanvas.height = smallH;
+    }
+
+    // Downscale
+    pxPostCtx.clearRect(0, 0, smallW, smallH);
+    pxPostCtx.drawImage(canvas, 0, 0, smallW, smallH);
+    const imgData = pxPostCtx.getImageData(0, 0, smallW, smallH);
+    const d = imgData.data;
+
+    // Clear and redraw as pixel grid
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+
+    for (let y = 0; y < smallH; y++) {
+      for (let x = 0; x < smallW; x++) {
+        const i = (y * smallW + x) * 4;
+        if (d[i + 3] < 10) continue;
+        ctx.fillStyle = `rgb(${d[i]},${d[i+1]},${d[i+2]})`;
+        ctx.globalAlpha = d[i + 3] / 255;
+        ctx.fillRect(x * step, y * step, cell, cell);
+      }
+    }
+
+    ctx.globalAlpha = 1;
   }
 
   // ── Vibe Mode ──
   const vibeToggle = document.getElementById('vibe-toggle');
+  const transitionPanel = document.getElementById('transition-controls');
   let vibeButtonTimer = null;
 
   function toggleVibeMode() {
@@ -288,8 +390,9 @@
     document.body.classList.toggle('vibe-mode', isVibeMode);
 
     if (isVibeMode) {
-      // Hide queue panel in vibe mode
+      // Hide queue panel + transition controls in vibe mode
       queuePanel.classList.add('queue-hidden');
+      transitionPanel.classList.add('tx-hidden');
       // Show button briefly, then fade it out after 1 second
       vibeToggle.classList.remove('vibe-hidden');
       vibeToggle.classList.add('vibe-active');
@@ -300,9 +403,100 @@
     } else {
       // Restore everything
       queuePanel.classList.remove('queue-hidden');
+      transitionPanel.classList.remove('tx-hidden');
       clearTimeout(vibeButtonTimer);
       vibeToggle.classList.remove('vibe-active', 'vibe-hidden');
     }
+  }
+
+  function toggleTransition() {
+    transitionEnabled = !transitionEnabled;
+    btnTransition.classList.toggle('active', transitionEnabled);
+  }
+
+  function toggleSunArc() {
+    sunArcEnabled = !sunArcEnabled;
+    btnSunArc.classList.toggle('active', sunArcEnabled);
+  }
+
+  function toggleLofiGrid() {
+    lofiGridEnabled = !lofiGridEnabled;
+    btnLofiGrid.classList.toggle('active', lofiGridEnabled);
+    if (!lofiGridEnabled) {
+      // Full clear to remove gray pixel remnants
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+  }
+
+  function toggleAmpBars() {
+    ampBarsEnabled = !ampBarsEnabled;
+    btnAmpBars.classList.toggle('active', ampBarsEnabled);
+  }
+
+  function toggleMouseFx() {
+    mouseFxEnabled = !mouseFxEnabled;
+    btnMouseFx.classList.toggle('active', mouseFxEnabled);
+  }
+
+  // ── Shuffle Randomizer ──
+  function shuffleSettings() {
+    // Random visualizer (skip blank at index 0)
+    const vizIdx = 1 + Math.floor(Math.random() * (visualizers.length - 1));
+    setVisualizer(vizIdx);
+
+    // Random toggles for each effect
+    const randBool = () => Math.random() < 0.5;
+
+    transitionEnabled = randBool();
+    btnTransition.classList.toggle('active', transitionEnabled);
+
+    sunArcEnabled = randBool();
+    btnSunArc.classList.toggle('active', sunArcEnabled);
+
+    lofiGridEnabled = randBool();
+    btnLofiGrid.classList.toggle('active', lofiGridEnabled);
+
+    ampBarsEnabled = randBool();
+    btnAmpBars.classList.toggle('active', ampBarsEnabled);
+
+    mouseFxEnabled = randBool();
+    btnMouseFx.classList.toggle('active', mouseFxEnabled);
+
+    // Full clear for clean slate
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+
+  // ── Clear to Black ──
+  function clearToBlack() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    mfxCtx.setTransform(1, 0, 0, 1, 0, 0);
+    mfxCtx.clearRect(0, 0, mouseFxCanvas.width, mouseFxCanvas.height);
+    mfxCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+
+  // ── Reset to Defaults ──
+  function resetDefaults() {
+    setVisualizer(0); // Blank
+    transitionEnabled = false;
+    btnTransition.classList.remove('active');
+    transitionAlpha = 0;
+    sunArcEnabled = false;
+    btnSunArc.classList.remove('active');
+    lofiGridEnabled = false;
+    btnLofiGrid.classList.remove('active');
+    ampBarsEnabled = false;
+    btnAmpBars.classList.remove('active');
+    mouseFxEnabled = false;
+    btnMouseFx.classList.remove('active');
+    mouseParticles.length = 0;
+    clearToBlack();
   }
 
   // ── Help ──
@@ -321,11 +515,22 @@
   btnShuffle.addEventListener('click', toggleShuffle);
   btnMute.addEventListener('click', toggleMute);
   btnVibe.addEventListener('click', toggleVibeMode);
+  btnTransition.addEventListener('click', toggleTransition);
+  btnSunArc.addEventListener('click', toggleSunArc);
+  btnLofiGrid.addEventListener('click', toggleLofiGrid);
+  btnAmpBars.addEventListener('click', toggleAmpBars);
+  btnMouseFx.addEventListener('click', toggleMouseFx);
+  document.getElementById('btn-shuffle-fx').addEventListener('click', shuffleSettings);
+  document.getElementById('btn-reset-defaults').addEventListener('click', resetDefaults);
+  transitionSlider.addEventListener('input', (e) => {
+    transitionDuration = parseFloat(e.target.value);
+    transitionLabel.textContent = transitionDuration + 's';
+  });
   volumeSlider.addEventListener('input', (e) => setVolume(parseFloat(e.target.value)));
   progressBar.addEventListener('input', seekTo);
 
-  vizButtons.forEach((btn, i) => {
-    btn.addEventListener('click', () => setVisualizer(i));
+  vizButtons.forEach((btn) => {
+    btn.addEventListener('click', () => setVisualizerByName(btn.dataset.mode));
   });
 
   // Keyboard
@@ -386,12 +591,35 @@
       case '3': setVisualizer(2); break;
       case '4': setVisualizer(3); break;
       case '5': setVisualizer(4); break;
+      case '6': setVisualizer(5); break;
+      case '7': setVisualizer(6); break;
+      case '8': setVisualizer(7); break;
+      case '9': setVisualizer(8); break;
       case '?':
         toggleHelp();
         break;
       case 'q':
       case 'Q':
         toggleQueueVisible();
+        break;
+      case 't':
+      case 'T':
+        toggleTransition();
+        break;
+      case 'l':
+      case 'L':
+        toggleLofiGrid();
+        break;
+      case 'a':
+      case 'A':
+        toggleAmpBars();
+        break;
+      case 'r':
+      case 'R':
+        shuffleSettings();
+        break;
+      case '0':
+        resetDefaults();
         break;
       case 'Escape':
         if (isVibeMode) toggleVibeMode();
@@ -441,6 +669,291 @@
   }
   window.addEventListener('resize', resizeMouseFxCanvas);
   resizeMouseFxCanvas();
+
+  // ── Sunrise/Sunset Transition ──
+  const txCanvas = document.createElement('canvas');
+  const txCtx = txCanvas.getContext('2d');
+
+  function updateTransitionAlpha() {
+    if (!transitionEnabled) {
+      transitionAlpha = Math.max(0, transitionAlpha - 0.03);
+      return;
+    }
+    if (!audio || !isFinite(audio.duration) || audio.duration === 0 || !isPlaying) {
+      return; // hold current alpha (stays dark on startup)
+    }
+    const timeLeft = audio.duration - audio.currentTime;
+    const timeIn = audio.currentTime;
+    let target = 0;
+
+    // Sunset: fade to black at end of song
+    if (timeLeft < transitionDuration) {
+      target = Math.max(target, 1 - (timeLeft / transitionDuration));
+    }
+
+    // Sunrise: guaranteed 1s of full black, then fade
+    if (timeIn < 1) {
+      transitionAlpha = 1;
+      return;
+    } else if (timeIn < transitionDuration + 1) {
+      const fadeProgress = (timeIn - 1) / transitionDuration;
+      target = Math.max(target, 1 - fadeProgress);
+    }
+
+    transitionAlpha += (target - transitionAlpha) * 0.06;
+    if (Math.abs(transitionAlpha - target) < 0.001) transitionAlpha = target;
+  }
+
+  function renderTransition() {
+    if (transitionAlpha <= 0.005) return;
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    // Pure black when fully dark (startup / between songs)
+    if (transitionAlpha >= 0.99) {
+      mfxCtx.save();
+      mfxCtx.globalAlpha = 1;
+      mfxCtx.fillStyle = '#000';
+      mfxCtx.fillRect(0, 0, w, h);
+      mfxCtx.restore();
+      return;
+    }
+
+    // Smooth fade-from-black: colors emerge gradually
+    const fadeIn = Math.min(1, (1 - transitionAlpha) * 4);
+
+    const pxSize = 20;
+    const cols = Math.ceil(w / pxSize);
+    const rows = Math.ceil(h / pxSize);
+
+    if (txCanvas.width !== cols || txCanvas.height !== rows) {
+      txCanvas.width = cols;
+      txCanvas.height = rows;
+    }
+
+    const t = performance.now() * 0.001;
+    const a = transitionAlpha;
+
+    // Sun sits near horizon, sinks below as alpha → 1
+    // Anchored to TX_SUN_X/TX_SUN_Y so it matches the arc sun origin
+    const sunY = TX_SUN_Y + a * 0.25;
+    const sunX = TX_SUN_X + Math.sin(t * 0.15) * 0.05;
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const ny = y / rows;
+        const nx = x / cols;
+        const dx = nx - sunX;
+        const dy = (ny - sunY) * 2;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        let hue, sat, lum;
+
+        if (ny > sunY + 0.05) {
+          // Below horizon — dark earth
+          const depth = Math.min(1, (ny - sunY - 0.05) / 0.3);
+          hue = 260 + depth * 20;
+          sat = 15;
+          lum = Math.max(1, 6 * (1 - depth) * (1 - a * 0.7));
+        } else {
+          // Sky — warm at horizon, cool at top
+          const skyH = Math.max(0, (sunY - ny) / sunY);
+          hue = 25 + skyH * 240;
+          sat = 75 - skyH * 25;
+          lum = Math.max(1, (28 - skyH * 20) * (1 - a * 0.85));
+        }
+
+        // Sun glow
+        if (dist < 0.6) {
+          const g = Math.pow(1 - dist / 0.6, 2);
+          hue = hue + (40 - hue) * g;
+          lum = Math.min(100, lum + g * 55 * (1 - a * 0.5));
+          sat = Math.min(100, sat + g * 25);
+        }
+
+        // Shimmer
+        lum += Math.sin(x * 0.7 + y * 0.5 + t * 1.2) * 1.5;
+        lum = Math.max(0, Math.min(100, lum)) * fadeIn;
+        sat = Math.max(0, Math.min(100, sat));
+
+        txCtx.fillStyle = `hsl(${hue},${sat}%,${lum}%)`;
+        txCtx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    mfxCtx.save();
+    mfxCtx.globalAlpha = Math.min(1, a * 1.8);
+    if (lofiGridEnabled) {
+      // Batch read all pixels once (avoids per-pixel getImageData)
+      const imgData = txCtx.getImageData(0, 0, cols, rows).data;
+      for (let py = 0; py < rows; py++) {
+        for (let px = 0; px < cols; px++) {
+          const i = (py * cols + px) * 4;
+          if (imgData[i + 3] < 10) continue;
+          mfxCtx.fillStyle = `rgb(${imgData[i]},${imgData[i+1]},${imgData[i+2]})`;
+          mfxCtx.fillRect(px * pxSize, py * pxSize, pxSize - 2, pxSize - 2);
+        }
+      }
+    } else {
+      mfxCtx.imageSmoothingEnabled = false;
+      mfxCtx.drawImage(txCanvas, 0, 0, w, h);
+    }
+    mfxCtx.restore();
+  }
+
+  // ── Persistent Sun Arc (draggable) ──
+  const TX_SUN_X = 0.5;
+  const TX_SUN_Y = 0.65;
+
+  function getSunArcPos() {
+    if (!audio || !isFinite(audio.duration) || audio.duration === 0) return null;
+    const progress = audio.currentTime / audio.duration;
+
+    const arcNX = 0.08 + progress * 0.84;
+    const norm = 2 * progress - 1;
+    const horizon = 0.78;
+    const zenith = 0.08;
+    const arcNY = horizon - (horizon - zenith) * (1 - norm * norm);
+
+    return { x: arcNX * window.innerWidth, y: arcNY * window.innerHeight };
+  }
+
+  function renderSunArc() {
+    if (!sunArcEnabled || !audio || !isFinite(audio.duration) || audio.duration === 0) return;
+    if (!isPlaying && audio.currentTime === 0) return;
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const px = 20;
+    const arcPos = getSunArcPos();
+    if (!arcPos) return;
+
+    // Determine if we're in the sunset zone
+    const timeLeft = audio.duration - audio.currentTime;
+    const inSunset = timeLeft < transitionDuration;
+
+    // If player dragged the sun, lerp back during sunset
+    let sunPX, sunPY;
+    if (sunDragX !== null && !inSunset) {
+      sunPX = sunDragX;
+      sunPY = sunDragY;
+      sunReturning = false;
+    } else if (sunDragX !== null && inSunset) {
+      // Smoothly return to arc position
+      sunReturning = true;
+      sunDragX += (arcPos.x - sunDragX) * 0.04;
+      sunDragY += (arcPos.y - sunDragY) * 0.04;
+      if (Math.abs(sunDragX - arcPos.x) < 2 && Math.abs(sunDragY - arcPos.y) < 2) {
+        sunDragX = null;
+        sunDragY = null;
+      }
+      sunPX = sunDragX !== null ? sunDragX : arcPos.x;
+      sunPY = sunDragY !== null ? sunDragY : arcPos.y;
+    } else {
+      sunPX = arcPos.x;
+      sunPY = arcPos.y;
+    }
+
+    const coreR = 4;
+    const glowR = 16;
+    const t = performance.now() * 0.001;
+
+    const minCol = Math.max(0, Math.floor((sunPX - glowR * px) / px));
+    const maxCol = Math.min(Math.ceil(w / px), Math.ceil((sunPX + glowR * px) / px));
+    const minRow = Math.max(0, Math.floor((sunPY - glowR * px) / px));
+    const maxRow = Math.min(Math.ceil(h / px), Math.ceil((sunPY + glowR * px) / px));
+
+    mfxCtx.save();
+
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        const bx = col * px;
+        const by = row * px;
+        const dx = (bx + px / 2 - sunPX) / px;
+        const dy = (by + px / 2 - sunPY) / px;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > glowR) continue;
+
+        let hue, sat, lum, alpha;
+
+        if (dist <= coreR) {
+          const f = dist / coreR;
+          hue = 45 - f * 10;
+          sat = 95 - f * 15;
+          lum = 95 - f * 30;
+          alpha = 0.9 - f * 0.15;
+        } else {
+          const f = (dist - coreR) / (glowR - coreR);
+          hue = 35 - f * 15;
+          sat = 80 - f * 25;
+          lum = 50 * Math.pow(1 - f, 1.5);
+          alpha = 0.45 * Math.pow(1 - f, 2);
+        }
+
+        lum += Math.sin(col * 0.9 + row * 0.7 + t * 1.5) * 2.5;
+        alpha *= 0.92 + Math.sin(col * 0.4 + t * 0.8) * 0.08;
+
+        if (alpha < 0.01 || lum < 1) continue;
+
+        mfxCtx.globalAlpha = Math.min(1, alpha);
+        mfxCtx.fillStyle = `hsl(${hue},${sat}%,${Math.max(0, Math.min(100, lum))}%)`;
+        const pxGap = lofiGridEnabled ? 2 : 1;
+        mfxCtx.fillRect(bx, by, px - pxGap, px - pxGap);
+      }
+    }
+
+    mfxCtx.restore();
+  }
+
+  // ── Lofi Pixel Grid ──
+  // Always renders the frequency visualization.
+  // lofiGridEnabled toggles hard pixel edges vs smooth analog fill.
+  function renderLofiGrid() {
+    if (!ampBarsEnabled || !analyser || !dataArray) return;
+
+    analyser.getByteFrequencyData(dataArray);
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const cell = 10;
+    const gap = lofiGridEnabled ? 3 : 0;
+    const step = cell + gap;
+    const cols = Math.ceil(w / step);
+    const rows = Math.ceil(h / step);
+    const fillW = lofiGridEnabled ? cell : step;
+    const fillH = lofiGridEnabled ? cell : step;
+    const t = performance.now() * 0.001;
+
+    mfxCtx.save();
+
+    for (let col = 0; col < cols; col++) {
+      const freqIdx = Math.min(
+        Math.floor(Math.pow(col / cols, 1.8) * bufferLength * 0.45),
+        bufferLength - 1
+      );
+      const amp = dataArray[freqIdx] / 255;
+      const litRows = Math.ceil(amp * rows);
+
+      for (let ri = 0; ri < litRows; ri++) {
+        const y = h - (ri + 1) * step;
+        if (y < 0) break;
+
+        const intensity = ri / Math.max(1, litRows);
+        const hue = 35 + intensity * 12;
+        const sat = 70 + intensity * 20;
+        const lum = 10 + intensity * 45;
+        const flicker = 0.85 + Math.sin(col * 1.7 + ri * 2.3 + t * 4) * 0.15;
+        const alpha = (0.08 + intensity * 0.14) * flicker;
+
+        mfxCtx.globalAlpha = alpha;
+        mfxCtx.fillStyle = `hsl(${hue},${sat}%,${lum}%)`;
+        mfxCtx.fillRect(col * step, y, fillW, fillH);
+      }
+    }
+
+    mfxCtx.restore();
+  }
 
   // Per-visualizer mouse particle styles
   const mouseStyles = {
@@ -527,10 +1040,20 @@
     mfxCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     mfxCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
+    // Lofi pixel grid (behind transition)
+    renderLofiGrid();
+
+    // Sunrise/sunset transition overlay
+    renderTransition();
+
+    // Persistent sun arc (on top of transition)
+    renderSunArc();
+
     // Drop ripples
     renderDropRipples();
 
-    for (let i = mouseParticles.length - 1; i >= 0; i--) {
+    let mLen = mouseParticles.length;
+    for (let i = mLen - 1; i >= 0; i--) {
       const p = mouseParticles[i];
       p.x += p.vx;
       p.y += p.vy;
@@ -538,28 +1061,25 @@
       p.life -= p.decay;
 
       if (p.life <= 0) {
-        mouseParticles.splice(i, 1);
+        mouseParticles[i] = mouseParticles[mLen - 1];
+        mouseParticles.pop();
+        mLen--;
         continue;
       }
 
       const alpha = p.life;
       const light = 55 + (1 - p.life) * 25;
 
-      mfxCtx.save();
       mfxCtx.globalAlpha = alpha;
 
       switch (p.shape) {
         case 'rect':
           mfxCtx.fillStyle = `hsl(${p.hue}, 85%, ${light}%)`;
-          mfxCtx.shadowBlur = 6;
-          mfxCtx.shadowColor = `hsl(${p.hue}, 85%, ${light}%)`;
           mfxCtx.fillRect(p.x - p.size / 2, p.y - p.size * 2, p.size, p.size * 4);
           break;
 
         case 'line':
           mfxCtx.strokeStyle = `hsl(${p.hue}, 80%, ${light}%)`;
-          mfxCtx.shadowBlur = 8;
-          mfxCtx.shadowColor = '#00c878';
           mfxCtx.lineWidth = p.size;
           mfxCtx.beginPath();
           mfxCtx.moveTo(p.x, p.y);
@@ -569,8 +1089,6 @@
 
         case 'ring':
           mfxCtx.strokeStyle = `hsl(${p.hue}, 80%, ${light}%)`;
-          mfxCtx.shadowBlur = 10;
-          mfxCtx.shadowColor = `hsl(${p.hue}, 80%, ${light}%)`;
           mfxCtx.lineWidth = 1.5;
           mfxCtx.beginPath();
           mfxCtx.arc(p.x, p.y, p.size * (1 + (1 - p.life) * 3), 0, Math.PI * 2);
@@ -579,8 +1097,6 @@
 
         case 'glow':
           mfxCtx.fillStyle = `hsl(${p.hue}, 90%, ${light}%)`;
-          mfxCtx.shadowBlur = p.size * 4;
-          mfxCtx.shadowColor = `hsl(${p.hue}, 90%, ${light}%)`;
           mfxCtx.beginPath();
           mfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
           mfxCtx.fill();
@@ -591,8 +1107,6 @@
             p.trail.push({ x: p.x, y: p.y });
             if (p.trail.length > 12) p.trail.shift();
             mfxCtx.strokeStyle = `hsl(${p.hue}, 70%, ${light}%)`;
-            mfxCtx.shadowBlur = 6;
-            mfxCtx.shadowColor = `hsl(${p.hue}, 70%, 70%)`;
             mfxCtx.lineWidth = p.size;
             mfxCtx.beginPath();
             for (let t = 0; t < p.trail.length; t++) {
@@ -609,7 +1123,7 @@
           break;
       }
 
-      mfxCtx.restore();
+      mfxCtx.globalAlpha = 1;
     }
   }
 
@@ -617,23 +1131,49 @@
   document.addEventListener('mousemove', (e) => {
     mouseX = e.clientX;
     mouseY = e.clientY;
+
+    // Drag sun if active
+    if (isDraggingSun) {
+      sunDragX = e.clientX;
+      sunDragY = e.clientY;
+      return;
+    }
+
     // Only spawn move particles if mouse is actually moving fast enough
-    if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) {
+    if (mouseFxEnabled && Math.abs(e.movementX) + Math.abs(e.movementY) > 3) {
       spawnMouseParticles(mouseX, mouseY, false);
     }
-    if (isMouseDown) {
+    if (mouseFxEnabled && isMouseDown) {
       spawnMouseParticles(mouseX, mouseY, true);
     }
   });
 
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('#ui-overlay, #vibe-toggle, #queue-panel, #help-overlay')) return;
+    if (e.target.closest('#ui-overlay, #vibe-toggle, #queue-panel, #help-overlay, #transition-controls')) return;
+
+    // Check if clicking near the sun to start dragging
+    if (sunArcEnabled && isPlaying) {
+      const arcPos = getSunArcPos();
+      const sx = sunDragX !== null ? sunDragX : (arcPos ? arcPos.x : null);
+      const sy = sunDragY !== null ? sunDragY : (arcPos ? arcPos.y : null);
+      if (sx !== null) {
+        const dist = Math.hypot(e.clientX - sx, e.clientY - sy);
+        if (dist < 80) {
+          isDraggingSun = true;
+          sunDragX = e.clientX;
+          sunDragY = e.clientY;
+          return; // don't spawn click particles when grabbing sun
+        }
+      }
+    }
+
     isMouseDown = true;
-    spawnMouseParticles(e.clientX, e.clientY, true);
+    if (mouseFxEnabled) spawnMouseParticles(e.clientX, e.clientY, true);
   });
 
   document.addEventListener('mouseup', () => {
     isMouseDown = false;
+    isDraggingSun = false;
   });
 
   // ── Drag-and-Drop + Queue Panel ──
@@ -792,12 +1332,24 @@
   if (CFG.vibeButtonLabel) btnVibe.textContent = CFG.vibeButtonLabel;
   if (CFG.defaultVolume != null) volumeSlider.value = CFG.defaultVolume;
   if (CFG.defaultVisualizer != null) setVisualizer(CFG.defaultVisualizer);
+  if (CFG.transitionDuration != null) {
+    transitionSlider.value = CFG.transitionDuration;
+    transitionLabel.textContent = CFG.transitionDuration + 's';
+  }
+  btnSunArc.classList.toggle('active', sunArcEnabled);
+  btnLofiGrid.classList.toggle('active', lofiGridEnabled);
+  btnAmpBars.classList.toggle('active', ampBarsEnabled);
+  btnMouseFx.classList.toggle('active', mouseFxEnabled);
+  btnTransition.classList.toggle('active', transitionEnabled);
 
   loadTracks();
 
   // Start the render loop even before playing (shows idle visualization)
-  // Use silent data until audio connects
+  // Use silent data + stub analyser until audio connects
   dataArray = new Uint8Array(1024);
   bufferLength = 1024;
+  if (!analyser) {
+    analyser = { getByteFrequencyData() {}, getByteTimeDomainData() {} };
+  }
   startVisualization();
 })();

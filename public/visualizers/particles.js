@@ -6,7 +6,7 @@
 window.VisualizerParticles = {
   name: 'particles',
   particles: [],
-  maxParticles: 400,
+  maxParticles: 250,
 
   spawnParticle(canvas, energy, bassEnergy, trebleEnergy) {
     const cx = canvas.width / 2;
@@ -57,8 +57,9 @@ window.VisualizerParticles = {
       this.particles.push(this.spawnParticle(canvas, totalEnergy, bassEnergy, trebleEnergy));
     }
 
-    // Update and draw particles
-    for (let i = this.particles.length - 1; i >= 0; i--) {
+    // Update and draw particles (swap-and-pop for fast removal)
+    let len = this.particles.length;
+    for (let i = len - 1; i >= 0; i--) {
       const p = this.particles[i];
 
       // Physics
@@ -69,9 +70,11 @@ window.VisualizerParticles = {
       p.life -= p.decay;
       p.size *= 0.998;
 
-      // Remove dead particles
+      // Remove dead particles (swap with last, pop)
       if (p.life <= 0 || p.size < 0.5) {
-        this.particles.splice(i, 1);
+        this.particles[i] = this.particles[len - 1];
+        this.particles.pop();
+        len--;
         continue;
       }
 
@@ -79,40 +82,12 @@ window.VisualizerParticles = {
       const alpha = p.life * 0.8;
       const lightness = 50 + (1 - p.life) * 20;
 
-      ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.shadowBlur = p.size * 2;
-      ctx.shadowColor = `hsl(${p.hue}, ${p.saturation}%, ${lightness}%)`;
       ctx.fillStyle = `hsl(${p.hue}, ${p.saturation}%, ${lightness}%)`;
-
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
     }
-
-    // Connection lines between nearby particles
-    ctx.save();
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < this.particles.length; i++) {
-      for (let j = i + 1; j < this.particles.length; j++) {
-        const a = this.particles[i];
-        const b = this.particles[j];
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 80) {
-          const alpha = (1 - dist / 80) * 0.15 * a.life * b.life;
-          ctx.strokeStyle = `hsla(${(a.hue + b.hue) / 2}, 70%, 60%, ${alpha})`;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
-        }
-      }
-    }
-    ctx.restore();
 
     // Center energy bloom
     if (totalEnergy > 0.3) {

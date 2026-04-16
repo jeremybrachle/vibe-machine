@@ -1,20 +1,23 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { server, MIME_TYPES, AUDIO_EXTENSIONS } = require('../server');
+const { server, MIME_TYPES, AUDIO_EXTENSIONS, SECURITY_HEADERS } = require('../server');
 
 // ── Test Helpers ──
 
-function request(urlPath) {
+function request(urlPath, method = 'GET') {
   return new Promise((resolve, reject) => {
     const { port } = server.address();
-    http.get({ hostname: 'localhost', port, path: urlPath }, (res) => {
+    const opts = { hostname: 'localhost', port, path: urlPath, method };
+    const req = http.request(opts, (res) => {
       let data = '';
       res.on('data', (chunk) => (data += chunk));
       res.on('end', () =>
         resolve({ status: res.statusCode, headers: res.headers, body: data })
       );
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.end();
   });
 }
 
@@ -157,5 +160,67 @@ describe('Audio extensions', () => {
     expect(AUDIO_EXTENSIONS.has('.html')).toBe(false);
     expect(AUDIO_EXTENSIONS.has('.js')).toBe(false);
     expect(AUDIO_EXTENSIONS.has('.exe')).toBe(false);
+  });
+});
+
+// ── Security Headers ──
+
+describe('Security headers', () => {
+  test('responses include X-Content-Type-Options: nosniff', async () => {
+    const res = await request('/');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
+
+  test('responses include X-Frame-Options: DENY', async () => {
+    const res = await request('/');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+  });
+
+  test('responses include Referrer-Policy', async () => {
+    const res = await request('/');
+    expect(res.headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+  });
+
+  test('API responses also include security headers', async () => {
+    const res = await request('/api/tracks');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+  });
+
+  test('SECURITY_HEADERS object has expected keys', () => {
+    expect(SECURITY_HEADERS).toHaveProperty('X-Content-Type-Options');
+    expect(SECURITY_HEADERS).toHaveProperty('X-Frame-Options');
+    expect(SECURITY_HEADERS).toHaveProperty('Referrer-Policy');
+  });
+});
+
+// ── Cache-Control ──
+
+describe('Cache-Control headers', () => {
+  test('HTML responses have no-cache', async () => {
+    const res = await request('/');
+    expect(res.headers['cache-control']).toBe('no-cache');
+  });
+
+  test('CSS/JS responses have public cache', async () => {
+    const res = await request('/styles.css');
+    expect(res.headers['cache-control']).toBe('public, max-age=3600');
+  });
+});
+
+// ── Method Validation ──
+
+describe('HTTP method validation', () => {
+  test('POST to /api/tracks returns 405', async () => {
+    const res = await request('/api/tracks', 'POST');
+    expect(res.status).toBe(405);
+    expect(res.headers['allow']).toBe('GET');
+    const body = JSON.parse(res.body);
+    expect(body.error).toBe('Method Not Allowed');
+  });
+
+  test('DELETE to /api/tracks returns 405', async () => {
+    const res = await request('/api/tracks', 'DELETE');
+    expect(res.status).toBe(405);
   });
 });

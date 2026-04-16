@@ -109,4 +109,18 @@ describe('VIBE_CONFIG', () => {
       expect(config.vibeMouseTimeout).toBeGreaterThan(0);
     });
   });
+
+  describe('default toggle states', () => {
+    test('all effects default to off', () => {
+      expect(config.transitionEnabled).toBe(false);
+      expect(config.sunArcEnabled).toBe(false);
+      expect(config.lofiGridEnabled).toBe(false);
+      expect(config.ampBarsEnabled).toBe(false);
+      expect(config.mouseFxEnabled).toBe(false);
+    });
+
+    test('transitionDuration is a positive number', () => {
+      expect(config.transitionDuration).toBeGreaterThan(0);
+    });
+  });
 });

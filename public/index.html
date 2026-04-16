@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vibe Machine</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="config.js"></script>
+  <script src="config.js?v=2"></script>
 </head>
 <body>
   <canvas id="visualizer"></canvas>
@@ -36,12 +36,16 @@
     <!-- Top bar: visualization mode -->
     <div id="top-bar">
       <div id="viz-modes">
-        <button class="viz-btn active" data-mode="bars">Bars</button>
+        <button class="viz-btn active" data-mode="blank">Blank</button>
+        <button class="viz-btn" data-mode="bars">Bars</button>
         <button class="viz-btn" data-mode="waveform">Wave</button>
         <button class="viz-btn" data-mode="circular">Circular</button>
         <button class="viz-btn" data-mode="particles">Particles</button>
         <button class="viz-btn" data-mode="starfield">Starfield</button>
+        <button class="viz-btn" data-mode="pixelgrid">Pixel Grid</button>
+        <button class="viz-btn" data-mode="beach-alt1">Beach</button>
       </div>
+      <div id="viz-options" class="viz-options hidden"></div>
     </div>
 
     <!-- Bottom bar: player controls -->
@@ -70,6 +74,21 @@
     </div>
   </div>
 
+  <!-- Transition controls (bottom-left, mirrors queue panel) -->
+  <div id="transition-controls">
+    <button id="btn-transition" class="ctrl-btn-sm" title="Toggle Transition (T)">🌅</button>
+    <input type="range" id="transition-slider" min="1" max="15" value="5" step="0.5">
+    <span id="transition-label">5s</span>
+    <span class="tx-sep">│</span>
+    <button id="btn-sun-arc" class="ctrl-btn-sm" title="Persistent Sun">☀</button>
+    <button id="btn-lofi-grid" class="ctrl-btn-sm" title="Pixel Edges (L)">▦</button>
+    <button id="btn-amp-bars" class="ctrl-btn-sm" title="Amplitude Bars (A)">≡</button>
+    <button id="btn-mouse-fx" class="ctrl-btn-sm" title="Mouse Particles">✦</button>
+    <span class="tx-sep">│</span>
+    <button id="btn-shuffle-fx" class="ctrl-btn-sm" title="Shuffle Settings (R)">🎲</button>
+    <button id="btn-reset-defaults" class="ctrl-btn-sm" title="Reset Defaults (0)">⟲</button>
+  </div>
+
   <!-- Floating vibe mode button (outside UI overlay so it can persist) -->
   <div id="vibe-toggle">
     <button id="btn-vibe" title="Vibe Mode (F)">⟐ VIBE MODE</button>
@@ -91,19 +110,28 @@
         <kbd>F</kbd> <span>Complete vibe mode</span>
         <kbd>M</kbd> <span>Mute / Unmute</span>
         <kbd>↑↓</kbd> <span>Volume</span>
-        <kbd>1-5</kbd> <span>Jump to visualizer</span>
+        <kbd>1-9</kbd> <span>Jump to visualizer</span>
+        <kbd>T</kbd> <span>Toggle transition</span>
+        <kbd>L</kbd> <span>Pixel edges</span>
+        <kbd>A</kbd> <span>Amplitude bars</span>
+        <kbd>R</kbd> <span>Shuffle settings</span>
+        <kbd>0</kbd> <span>Reset defaults</span>
+        <kbd>Q</kbd> <span>Toggle queue panel</span>
         <kbd>?</kbd> <span>Show/hide this help</span>
       </div>
       <p class="help-dismiss">Press any key to dismiss</p>
     </div>
   </div>
 
-  <script src="visualizers/bars.js"></script>
-  <script src="visualizers/waveform.js"></script>
-  <script src="visualizers/circular.js"></script>
-  <script src="visualizers/particles.js"></script>
-  <script src="visualizers/starfield.js"></script>
-  <script src="app.js"></script>
+  <script src="visualizers/blank.js?v=2"></script>
+  <script src="visualizers/bars.js?v=2"></script>
+  <script src="visualizers/waveform.js?v=2"></script>
+  <script src="visualizers/circular.js?v=2"></script>
+  <script src="visualizers/particles.js?v=2"></script>
+  <script src="visualizers/starfield.js?v=2"></script>
+  <script src="visualizers/pixelgrid.js?v=3"></script>
+  <script src="visualizers/beach-alt1.js?v=3"></script>
+  <script src="app.js?v=3"></script>
   <script>
     // Apply config-driven branding to DOM
     (function() {

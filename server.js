@@ -25,9 +25,34 @@ const MIME_TYPES = {
 
 const AUDIO_EXTENSIONS = new Set(['.ogg', '.mp3', '.wav', '.flac', '.m4a', '.aac', '.webm']);
 
+// Security headers applied to every response
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
+function applySecurityHeaders(res) {
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    res.setHeader(k, v);
+  }
+}
+
+// Cache durations by file type
+function getCacheControl(ext) {
+  if (ext === '.html') return 'no-cache';
+  if (AUDIO_EXTENSIONS.has(ext)) return 'public, max-age=86400';
+  return 'public, max-age=3600';
+}
+
 // ── Route Handlers ──
 
-function handleTrackList(res) {
+function handleTrackList(req, res) {
+  if (req.method !== 'GET') {
+    res.writeHead(405, { 'Allow': 'GET', 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+    return;
+  }
   try {
     if (!fs.existsSync(TRACKS_DIR)) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -71,6 +96,7 @@ function handleTrackList(res) {
 function serveFile(filePath, req, res) {
   const ext = path.extname(filePath).toLowerCase();
   const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
+  const cacheControl = getCacheControl(ext);
 
   fs.stat(filePath, (err, stat) => {
     if (err) {
@@ -91,6 +117,7 @@ function serveFile(filePath, req, res) {
         'Accept-Ranges': 'bytes',
         'Content-Length': chunkSize,
         'Content-Type': mimeType,
+        'Cache-Control': cacheControl,
       });
       stream.pipe(res);
     } else {
@@ -98,6 +125,7 @@ function serveFile(filePath, req, res) {
         'Content-Type': mimeType,
         'Content-Length': stat.size,
         'Accept-Ranges': 'bytes',
+        'Cache-Control': cacheControl,
       });
       fs.createReadStream(filePath).pipe(res);
     }
@@ -107,12 +135,14 @@ function serveFile(filePath, req, res) {
 // ── Request Router ──
 
 function handleRequest(req, res) {
+  applySecurityHeaders(res);
+
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const pathname = decodeURIComponent(url.pathname);
 
   // API: list tracks
   if (pathname === '/api/tracks') {
-    return handleTrackList(res);
+    return handleTrackList(req, res);
   }
 
   // Resolve file path based on route
@@ -151,4 +181,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { server, MIME_TYPES, AUDIO_EXTENSIONS, PUBLIC_DIR, TRACKS_DIR };
+module.exports = { server, MIME_TYPES, AUDIO_EXTENSIONS, SECURITY_HEADERS, PUBLIC_DIR, TRACKS_DIR };

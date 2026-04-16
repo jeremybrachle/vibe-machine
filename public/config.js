@@ -32,8 +32,8 @@ window.VIBE_CONFIG = {
   // To add a new visualizer: create visualizers/myvis.js exposing
   //   window.VisualizerMyvis = { name: 'myvis', draw(ctx, canvas, analyser, data, len) {} }
   // then add 'myvis' here and add a <script> tag in index.html.
-  visualizers: ['bars', 'waveform', 'circular', 'particles', 'starfield'],
-  defaultVisualizer: 0,         // Index into the array above
+  visualizers: ['blank', 'bars', 'waveform', 'circular', 'particles', 'starfield', 'pixelgrid', 'beach-alt1'],
+  defaultVisualizer: 0,         // Index into the array above (0 = blank)
 
   // ── Theme Colors ──
   // Used by CSS custom properties and visualizers.
@@ -55,4 +55,12 @@ window.VIBE_CONFIG = {
   // true  = show cauldron when no tracks are loaded (reusable/portfolio edition)
   // false = hide cauldron, expect pre-bundled tracks/ folder
   dropZoneEnabled: true,
+
+  // ── Transitions ──
+  transitionEnabled: false,        // Sunrise/sunset effect between songs
+  transitionDuration: 5,          // Seconds for fade at start/end of each song
+  sunArcEnabled: false,            // Persistent sun that arcs across the song
+  lofiGridEnabled: false,         // Show hard pixel grid edges on freq visualization
+  ampBarsEnabled: false,          // Show amber amplitude bars overlay
+  mouseFxEnabled: false,          // Mouse interaction particle effects
 };

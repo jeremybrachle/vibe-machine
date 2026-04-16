@@ -112,6 +112,39 @@ body {
   box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.2);
 }
 
+/* ── Viz Options (per-visualizer toggles) ── */
+.viz-options {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  justify-content: center;
+}
+.viz-options.hidden { display: none; }
+
+.viz-opt-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #888;
+  padding: 4px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.viz-opt-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #ccc;
+}
+.viz-opt-btn.active {
+  background: rgba(var(--secondary-rgb), 0.2);
+  border-color: rgba(var(--secondary-rgb), 0.4);
+  color: var(--secondary);
+  box-shadow: 0 0 8px rgba(var(--secondary-rgb), 0.15);
+}
+
 #btn-vibe {
   background: rgba(var(--secondary-rgb), 0.2);
   border: 1px solid rgba(var(--secondary-rgb), 0.4);
@@ -131,6 +164,97 @@ body {
   box-shadow: 0 0 20px rgba(var(--secondary-rgb), 0.3);
   color: var(--secondary);
   filter: brightness(1.3);
+}
+
+/* ── Transition Controls (bottom-left, mirrors queue panel) ── */
+#transition-controls {
+  position: fixed;
+  bottom: 160px;
+  left: 16px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 10, 20, 0.92);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  border-radius: 20px;
+  padding: 6px 14px;
+  backdrop-filter: blur(12px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#transition-controls.tx-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-300px);
+}
+
+.ctrl-btn-sm {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #999;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.ctrl-btn-sm:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+.ctrl-btn-sm.active {
+  background: rgba(var(--accent-rgb), 0.2);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  color: var(--accent);
+}
+
+.tx-sep {
+  color: rgba(255,255,255,0.12);
+  font-size: 14px;
+  user-select: none;
+}
+
+#transition-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 3px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+
+#transition-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+#transition-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+#transition-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 24px;
 }
 
 /* ── Bottom Bar ── */
@@ -418,7 +542,7 @@ body.vibe-mode {
 /* ── Queue Panel (bottom-right) ── */
 #queue-panel {
   position: fixed;
-  bottom: 100px;
+  bottom: 160px;
   right: 16px;
   width: 280px;
   max-height: 400px;
