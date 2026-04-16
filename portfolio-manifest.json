@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "project": "vibe-machine",
+  "title": "Vibe Machine",
+  "embed": {
+    "type": "iframe",
+    "src": "http://localhost:5001",
+    "fallback": "summary"
+  },
+  "summary": {
+    "tagline": "Real-time audio visualizer with 10+ modes and 640 combinations",
+    "description": "A browser-based audio-reactive visualizer powered by Canvas 2D and the Web Audio API. 10 visualization modes, 4 overlay effects, and 4 sky arc modes combine into 640 unique visual combos. Drag-and-drop music loading, keyboard shortcuts, fullscreen Vibe Mode, and queue management — all in zero-dependency vanilla JS.",
+    "techStack": ["Vanilla JS", "Canvas 2D", "Web Audio API", "Node.js"],
+    "features": [
+      "10 visualization modes (bars, waveform, circular, particles, starfield, pixel grid, sunset, starry night, piano, blank)",
+      "640 possible combinations via 4 overlay effects and 4 sky arc modes",
+      "Drag-and-drop audio loading (mp3, wav, flac, ogg, m4a, aac, webm)",
+      "Vibe Mode — fullscreen immersion with auto-hiding UI and cursor",
+      "Mouse particle effects and interactive sun dragging",
+      "Queue management panel with track reordering",
+      "Keyboard shortcuts for every control",
+      "Sunrise/sunset transitions between tracks"
+    ],
+    "architecture": "Single-page app: HTML5 Canvas rendering loop driven by Web Audio AnalyserNode FFT frequency data. Node.js static server with /api/tracks endpoint that scans categorized subdirectories. Each visualizer is a standalone draw() function module. Effects (sun arc, lo-fi grid, amp bars, mouse particles) layer on top of any visualizer."
+  },
+  "media": {
+    "screenshots": [
+      "portfolio-assets/bars-mode.png",
+      "portfolio-assets/particles-mode.png",
+      "portfolio-assets/sunset-mode.png"
+    ],
+    "videos": [],
+    "thumbnail": "portfolio-assets/thumb.png"
+  },
+  "github": "https://github.com/jeremybrachle/vibe-machine",
+  "localPath": "/home/kerry/programming/vibe-machine",
+  "commands": {
+    "install": "npm install",
+    "dev": "node server.js 5001",
+    "build": null
+  }
+}

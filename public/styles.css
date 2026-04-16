@@ -586,22 +586,29 @@ body.vibe-mode {
 }
 
 /* ── Floating Vibe Button (outside overlay) ── */
-#vibe-toggle {
+#top-right-buttons {
   position: fixed;
   top: 16px;
   right: 24px;
   z-index: 20;
   pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   transition: opacity 0.4s ease;
 }
 
-#vibe-toggle.vibe-hidden {
+#vibe-toggle {
+  transition: opacity 0.4s ease;
+}
+
+#top-right-buttons.vibe-hidden {
   opacity: 0;
   pointer-events: none;
 }
 
-#vibe-toggle.vibe-hidden:hover,
-#vibe-toggle.vibe-hidden:focus-within {
+#top-right-buttons.vibe-hidden:hover,
+#top-right-buttons.vibe-hidden:focus-within {
   opacity: 1;
   pointer-events: auto;
 }
@@ -610,6 +617,12 @@ body.vibe-mode {
   background: rgba(var(--secondary-rgb), 0.4);
   border-color: rgba(var(--secondary-rgb), 0.7);
   box-shadow: 0 0 16px rgba(var(--secondary-rgb), 0.4);
+}
+
+/* ── Super Vibes beat flash ── */
+#btn-super-vibes.beat-flash {
+  filter: brightness(1.8);
+  transition: filter 0.05s ease;
 }
 
 /* ── Mouse FX Canvas ── */

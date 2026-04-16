@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vibe Machine</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <script src="config.js?v=3"></script>
 </head>
 <body>
@@ -46,6 +46,7 @@
         <button class="viz-btn" data-mode="sunset">Sunset</button>
         <button class="viz-btn" data-mode="starrynight">Starry Night</button>
         <button class="viz-btn" data-mode="piano">Piano</button>
+        <button id="btn-super-vibes" class="viz-btn" title="Super Vibes — beat-reactive randomizer (G)">⛲</button>
       </div>
       <div id="viz-options" class="viz-options hidden"></div>
     </div>
@@ -91,9 +92,11 @@
     <button id="btn-reset-defaults" class="ctrl-btn-sm" title="Reset Defaults (0)">⟲</button>
   </div>
 
-  <!-- Floating vibe mode button (outside UI overlay so it can persist) -->
-  <div id="vibe-toggle">
-    <button id="btn-vibe" title="Vibe Mode (F)">⟐ VIBE MODE</button>
+  <!-- Floating top-right buttons (outside UI overlay so they can persist) -->
+  <div id="top-right-buttons">
+    <div id="vibe-toggle">
+      <button id="btn-vibe" title="Vibe Mode (F)">⟐ VIBE MODE</button>
+    </div>
   </div>
 
   <!-- Mouse interaction effects layer -->
@@ -176,6 +179,7 @@
         <kbd>L</kbd> <span>Pixel edges</span>
         <kbd>A</kbd> <span>Amplitude bars</span>
         <kbd>R</kbd> <span>Shuffle settings</span>
+        <kbd>G</kbd> <span>Super Vibes (beat randomizer)</span>
         <kbd>0</kbd> <span>Reset defaults</span>
         <kbd>Q</kbd> <span>Toggle queue panel</span>
         <kbd>?</kbd> <span>Show/hide this help</span>
@@ -194,7 +198,7 @@
   <script src="visualizers/sunset.js?v=5"></script>
   <script src="visualizers/starrynight.js?v=3"></script>
   <script src="visualizers/piano.js?v=2"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
   <script>
     // Apply config-driven branding to DOM
     (function() {

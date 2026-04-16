@@ -39,6 +39,126 @@
   let isDraggingSun = false;
   let sunReturning = false;
 
+  // ── Super Vibes (Beat-Reactive Randomizer) ──
+  let superVibesEnabled = false;
+  const beatDetector = {
+    // Energy-based onset detection with adaptive threshold
+    energyHistory: [],          // rolling window of frame energies
+    historySize: 60,            // ~1 second at 60fps
+    threshold: CFG.superVibesThreshold || 1.4,  // energy must be this × average to trigger
+    cooldownMs: CFG.superVibesCooldown || 400,   // minimum ms between triggers
+    lastBeatTime: 0,
+    // Spectral flux for transient detection
+    prevSpectrum: null,
+    fluxHistory: [],
+    fluxHistorySize: 30,
+    // Adaptive sensitivity — relaxes threshold if no beats detected for a while
+    lastDetectionTime: 0,
+    droughtThresholdMs: 4000,   // if no beat for 4s, lower threshold temporarily
+    // Sub-band analysis for better musical sensitivity
+    bandRanges: {
+      low:  [0, 0.08],   // bass: kick drums, bass notes
+      mid:  [0.08, 0.4], // mids: snare, vocals, melody
+      high: [0.4, 1.0],  // highs: hi-hats, cymbals
+    },
+    bandHistory: { low: [], mid: [], high: [] },
+  };
+
+  function detectBeat() {
+    if (!superVibesEnabled || !analyser || !dataArray) return false;
+    if (!audioCtx || !isPlaying) return false;
+
+    const now = performance.now();
+    if (now - beatDetector.lastBeatTime < beatDetector.cooldownMs) return false;
+
+    // Get frequency data
+    analyser.getByteFrequencyData(dataArray);
+
+    const len = bufferLength;
+    if (len === 0) return false;
+
+    // Calculate sub-band energies
+    const bandEnergies = {};
+    for (const [band, [lo, hi]] of Object.entries(beatDetector.bandRanges)) {
+      const start = Math.floor(lo * len);
+      const end = Math.floor(hi * len);
+      let sum = 0;
+      for (let i = start; i < end; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      bandEnergies[band] = Math.sqrt(sum / Math.max(1, end - start));
+    }
+
+    // Total energy (weighted: bass is most important for beat detection)
+    const totalEnergy = bandEnergies.low * 1.5 + bandEnergies.mid * 1.0 + bandEnergies.high * 0.5;
+
+    // Spectral flux: how much the spectrum changed from last frame
+    let flux = 0;
+    if (beatDetector.prevSpectrum) {
+      for (let i = 0; i < len; i++) {
+        const diff = dataArray[i] - beatDetector.prevSpectrum[i];
+        if (diff > 0) flux += diff; // only positive changes (onsets, not decays)
+      }
+    }
+    beatDetector.prevSpectrum = new Uint8Array(dataArray);
+
+    // Push to histories
+    beatDetector.energyHistory.push(totalEnergy);
+    if (beatDetector.energyHistory.length > beatDetector.historySize) {
+      beatDetector.energyHistory.shift();
+    }
+
+    beatDetector.fluxHistory.push(flux);
+    if (beatDetector.fluxHistory.length > beatDetector.fluxHistorySize) {
+      beatDetector.fluxHistory.shift();
+    }
+
+    for (const band of Object.keys(beatDetector.bandRanges)) {
+      beatDetector.bandHistory[band].push(bandEnergies[band]);
+      if (beatDetector.bandHistory[band].length > beatDetector.historySize) {
+        beatDetector.bandHistory[band].shift();
+      }
+    }
+
+    // Need enough history to compare
+    if (beatDetector.energyHistory.length < 10) return false;
+
+    // Calculate averages
+    const avgEnergy = beatDetector.energyHistory.reduce((a, b) => a + b, 0) / beatDetector.energyHistory.length;
+    const avgFlux = beatDetector.fluxHistory.length > 5
+      ? beatDetector.fluxHistory.reduce((a, b) => a + b, 0) / beatDetector.fluxHistory.length
+      : 0;
+
+    // Bass-specific average (crucial for 4/4 detection)
+    const bassHistory = beatDetector.bandHistory.low;
+    const avgBass = bassHistory.reduce((a, b) => a + b, 0) / bassHistory.length;
+
+    // Adaptive threshold: if nothing detected for a while, lower the bar
+    let threshold = beatDetector.threshold;
+    const timeSinceLastDetection = now - beatDetector.lastDetectionTime;
+    if (timeSinceLastDetection > beatDetector.droughtThresholdMs) {
+      // Gradually relax threshold for flowing/quiet music
+      const droughtFactor = Math.min(0.3, (timeSinceLastDetection - beatDetector.droughtThresholdMs) / 10000);
+      threshold = Math.max(1.15, threshold - droughtFactor);
+    }
+
+    // Beat detection criteria (any ONE of these triggers a beat):
+    // 1. Total energy spike above adaptive threshold
+    const energyBeat = totalEnergy > avgEnergy * threshold && avgEnergy > 15;
+    // 2. Strong bass hit (most reliable for steady tempo)
+    const bassBeat = bandEnergies.low > avgBass * (threshold * 1.1) && avgBass > 20;
+    // 3. Large spectral flux (catches transients in flowing music like Claire de Lune)
+    const fluxBeat = flux > avgFlux * (threshold * 1.3) && avgFlux > 200;
+
+    if (energyBeat || bassBeat || fluxBeat) {
+      beatDetector.lastBeatTime = now;
+      beatDetector.lastDetectionTime = now;
+      return true;
+    }
+
+    return false;
+  }
+
   const visualizers = [
     window.VisualizerBlank,
     window.VisualizerBars,
@@ -69,7 +189,7 @@
   const progressBar = document.getElementById('progress-bar');
   const timeCurrent = document.getElementById('time-current');
   const timeTotal = document.getElementById('time-total');
-  const vizButtons = document.querySelectorAll('.viz-btn');
+  const vizButtons = document.querySelectorAll('.viz-btn[data-mode]');
   const btnTransition = document.getElementById('btn-transition');
   const transitionSlider = document.getElementById('transition-slider');
   const transitionLabel = document.getElementById('transition-label');
@@ -339,6 +459,11 @@
     // Update and render transition + mouse particles
     updateTransitionAlpha();
     renderMouseFx();
+
+    // Super Vibes: check for beats and trigger shuffles
+    if (superVibesEnabled && detectBeat()) {
+      superVibesBeatShuffle();
+    }
   }
 
   // ── Pixel Edge Post-Process ──
@@ -385,6 +510,7 @@
 
   // ── Vibe Mode ──
   const vibeToggle = document.getElementById('vibe-toggle');
+  const topRightButtons = document.getElementById('top-right-buttons');
   const transitionPanel = document.getElementById('transition-controls');
   let vibeButtonTimer = null;
 
@@ -398,18 +524,18 @@
       queuePanel.classList.add('queue-hidden');
       transitionPanel.classList.add('tx-hidden');
       // Show button briefly, then fade it out after 1 second
-      vibeToggle.classList.remove('vibe-hidden');
-      vibeToggle.classList.add('vibe-active');
+      topRightButtons.classList.remove('vibe-hidden');
+      topRightButtons.classList.add('vibe-active');
       clearTimeout(vibeButtonTimer);
       vibeButtonTimer = setTimeout(() => {
-        vibeToggle.classList.add('vibe-hidden');
+        topRightButtons.classList.add('vibe-hidden');
       }, 1000);
     } else {
       // Restore everything
       queuePanel.classList.remove('queue-hidden');
       transitionPanel.classList.remove('tx-hidden');
       clearTimeout(vibeButtonTimer);
-      vibeToggle.classList.remove('vibe-active', 'vibe-hidden');
+      topRightButtons.classList.remove('vibe-active', 'vibe-hidden');
     }
   }
 
@@ -444,6 +570,62 @@
   function toggleMouseFx() {
     mouseFxEnabled = !mouseFxEnabled;
     btnMouseFx.classList.toggle('active', mouseFxEnabled);
+  }
+
+  // ── Super Vibes Toggle ──
+  const btnSuperVibes = document.getElementById('btn-super-vibes');
+
+  function toggleSuperVibes() {
+    superVibesEnabled = !superVibesEnabled;
+    btnSuperVibes.classList.toggle('active', superVibesEnabled);
+    // Reset beat detector state on toggle
+    beatDetector.energyHistory.length = 0;
+    beatDetector.fluxHistory.length = 0;
+    beatDetector.prevSpectrum = null;
+    beatDetector.lastBeatTime = 0;
+    beatDetector.lastDetectionTime = performance.now();
+    for (const band of Object.keys(beatDetector.bandHistory)) {
+      beatDetector.bandHistory[band].length = 0;
+    }
+  }
+
+  function superVibesBeatShuffle() {
+    // Variant of shuffleSettings that's lighter — randomize a subset each beat
+    // to avoid overwhelming visual chaos
+    const actions = [
+      () => {
+        // Switch visualizer (skip blank)
+        const vizIdx = 1 + Math.floor(Math.random() * (visualizers.length - 1));
+        setVisualizer(vizIdx);
+      },
+      () => {
+        // Toggle a random effect
+        const effects = [
+          () => { transitionEnabled = !transitionEnabled; btnTransition.classList.toggle('active', transitionEnabled); },
+          () => {
+            sunArcMode = SUN_ARC_MODES[Math.floor(Math.random() * SUN_ARC_MODES.length)];
+            btnSunArc.classList.toggle('active', sunArcMode !== 'off');
+            btnSunArc.textContent = SUN_ARC_ICONS[sunArcMode] || '☀';
+          },
+          () => { lofiGridEnabled = !lofiGridEnabled; btnLofiGrid.classList.toggle('active', lofiGridEnabled); },
+          () => { ampBarsEnabled = !ampBarsEnabled; btnAmpBars.classList.toggle('active', ampBarsEnabled); },
+          () => { mouseFxEnabled = !mouseFxEnabled; btnMouseFx.classList.toggle('active', mouseFxEnabled); },
+        ];
+        effects[Math.floor(Math.random() * effects.length)]();
+      },
+    ];
+
+    // 40% chance to switch visualizer, 60% chance to toggle an effect
+    // This keeps it interesting without changing the whole scene every beat
+    if (Math.random() < 0.4) {
+      actions[0]();
+    } else {
+      actions[1]();
+    }
+
+    // Brief flash on the fountain button for visual feedback
+    btnSuperVibes.classList.add('beat-flash');
+    setTimeout(() => btnSuperVibes.classList.remove('beat-flash'), 120);
   }
 
   // ── Shuffle Randomizer ──
@@ -503,6 +685,8 @@
     btnAmpBars.classList.remove('active');
     mouseFxEnabled = false;
     btnMouseFx.classList.remove('active');
+    superVibesEnabled = false;
+    btnSuperVibes.classList.remove('active');
     mouseParticles.length = 0;
     clearToBlack();
   }
@@ -528,6 +712,7 @@
   btnLofiGrid.addEventListener('click', toggleLofiGrid);
   btnAmpBars.addEventListener('click', toggleAmpBars);
   btnMouseFx.addEventListener('click', toggleMouseFx);
+  btnSuperVibes.addEventListener('click', toggleSuperVibes);
   document.getElementById('btn-shuffle-fx').addEventListener('click', shuffleSettings);
   document.getElementById('btn-reset-defaults').addEventListener('click', resetDefaults);
   transitionSlider.addEventListener('input', (e) => {
@@ -626,6 +811,10 @@
       case 'R':
         shuffleSettings();
         break;
+      case 'g':
+      case 'G':
+        toggleSuperVibes();
+        break;
       case '0':
         resetDefaults();
         break;
@@ -650,16 +839,16 @@
     // Show vibe button if mouse is near top-right corner (where it lives)
     const nearTopRight = e.clientX > window.innerWidth - 250 && e.clientY < 80;
     if (nearTopRight) {
-      vibeToggle.classList.remove('vibe-hidden');
+      topRightButtons.classList.remove('vibe-hidden');
     } else {
-      vibeToggle.classList.add('vibe-hidden');
+      topRightButtons.classList.add('vibe-hidden');
     }
 
     clearTimeout(mouseTimer);
     mouseTimer = setTimeout(() => {
       if (isVibeMode) {
         document.body.classList.add('vibe-mode'); // hide cursor
-        vibeToggle.classList.add('vibe-hidden');
+        topRightButtons.classList.add('vibe-hidden');
       }
     }, CFG.vibeMouseTimeout || 2500);
   });
@@ -1212,7 +1401,7 @@
   });
 
   document.addEventListener('mousedown', (e) => {
-    if (e.target.closest('#ui-overlay, #vibe-toggle, #queue-panel, #help-overlay, #transition-controls')) return;
+    if (e.target.closest('#ui-overlay, #top-right-buttons, #queue-panel, #help-overlay, #transition-controls')) return;
 
     // Check if clicking near the sun to start dragging
     if (sunArcMode !== 'off' && isPlaying) {
@@ -1246,6 +1435,11 @@
   const queueDropZone = document.getElementById('queue-drop-zone');
   const btnQueueToggle = document.getElementById('btn-queue-toggle');
   let queueCollapsed = false;
+
+  // Hide drop zone entirely when disabled
+  if (CFG.dropZoneEnabled === false && queueDropZone) {
+    queueDropZone.style.display = 'none';
+  }
 
   const AUDIO_EXTS = new Set(
     (CFG.trackFormats || ['.ogg','.mp3','.wav','.flac','.m4a','.aac','.webm'])

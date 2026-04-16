@@ -54,7 +54,7 @@ window.VIBE_CONFIG = {
   // ── Drop Zone ──
   // true  = show cauldron when no tracks are loaded (reusable/portfolio edition)
   // false = hide cauldron, expect pre-bundled tracks/ folder
-  dropZoneEnabled: true,
+  dropZoneEnabled: false,
 
   // ── Transitions ──
   transitionEnabled: false,        // Sunrise/sunset effect between songs
@@ -63,4 +63,8 @@ window.VIBE_CONFIG = {
   lofiGridEnabled: false,         // Show hard pixel grid edges on freq visualization
   ampBarsEnabled: false,          // Show amber amplitude bars overlay
   mouseFxEnabled: false,          // Mouse interaction particle effects
+
+  // ── Super Vibes (Beat-Reactive Randomizer) ──
+  superVibesThreshold: 1.4,       // Energy multiplier to trigger a beat (lower = more sensitive)
+  superVibesCooldown: 400,        // Minimum ms between beat triggers
 };
